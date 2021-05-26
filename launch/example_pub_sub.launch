@@ -1,0 +1,9 @@
+<launch>
+
+  <!-- Node with the publisher/subscriber example -->
+  <node name="pub_sub" pkg="proprietary_template" type="example_pub_sub_node" output="screen" />
+
+  <!-- Run shell script as node -->
+  <node name="shell_node" pkg="proprietary_template" type="publish_msg.sh" launch-prefix="gnome-terminal --command" />
+
+</launch>
