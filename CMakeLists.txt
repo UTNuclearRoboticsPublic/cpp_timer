@@ -63,7 +63,7 @@ add_library(cpp_timer src/Timer.cpp)
 # )
 
 ## Mark libraries for installation
-install(TARGETS ${FOCUS_LIBRARY_NAME}
+install(TARGETS cpp_timer
         ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
         LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
         RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION})
