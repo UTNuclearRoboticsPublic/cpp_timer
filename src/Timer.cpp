@@ -1,16 +1,20 @@
 #include "cpp_timer/Timer.h"
 
-typedef std::shared_ptr<Layer> LayerPtr;
-typedef std::chrono::high_resolution_clock::time_point chronoTime;
-typedef std::map<std::string, double> durationMap;
-
 using std::string;
+
+namespace cpp_timer{
+
+// ================================================================================
+// ================================================================================
 
 Timer::Timer(){
     start_times_.reserve(10);
     current_layer_ = LayerPtr(new Layer);
     current_layer_->layer_index = 0;
 }
+
+// ================================================================================
+// ================================================================================
 
 void Timer::tic(string function_name){
     // If there is already a layer for the function in this framework, move to it
@@ -37,7 +41,10 @@ void Timer::tic(string function_name){
     start_times_.push_back(std::chrono::high_resolution_clock::now());
 }
 
-double Timer::toc(string function_name){        
+// ================================================================================
+// ================================================================================
+
+long int Timer::toc(string function_name){        
     // Find the duration since the last tic
     chronoTime now  = std::chrono::high_resolution_clock::now();
     long int duration = std::chrono::duration_cast<std::chrono::microseconds>(now - start_times_.back()).count();
@@ -52,6 +59,9 @@ double Timer::toc(string function_name){
     start_times_.pop_back();
     return duration;
 }
+
+// ================================================================================
+// ================================================================================
 
 void Timer::summary(){
     // Ensure that all loose ends have been tied up
@@ -82,6 +92,9 @@ void Timer::summary(){
     std::cout << std::endl;
 }
 
+// ================================================================================
+// ================================================================================
+
 void Timer::printLayer_(const LayerPtr& layer, int prev_duration){
     for (const std::pair<std::string, LayerPtr> &p : layer->children){
         // Get the child layer info
@@ -108,6 +121,9 @@ void Timer::printLayer_(const LayerPtr& layer, int prev_duration){
     }
 }
 
+// ================================================================================
+// ================================================================================
+
 durationMap Timer::getTotals_(LayerPtr layer){
     static durationMap totals;
     for (const std::pair<std::string, LayerPtr> &p : layer->children){
@@ -129,3 +145,8 @@ durationMap Timer::getTotals_(LayerPtr layer){
 
     return totals;
 }
+
+// ================================================================================
+// ================================================================================
+
+} // namespace cpp_timer
