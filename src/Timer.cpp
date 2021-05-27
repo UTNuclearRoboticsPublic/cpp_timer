@@ -48,7 +48,8 @@ Timer::Timer(){
 void Timer::tic(string function_name){
     // If there is already a layer for the function in this framework, move to it
     if (current_layer_->children.count(function_name)){
-        current_layer_ = current_layer_->children[function_name];
+        current_layer_->children[function_name].call_count++;
+        current_layer_ = current_layer_->children[function_name].layer;
     }
     
     // Otherwise, create a new layer with the current layer as the parent
@@ -60,7 +61,7 @@ void Timer::tic(string function_name){
         
         // Update the parent-child relations
         new_layer->parent = current_layer_;
-        current_layer_->children[function_name] = new_layer;
+        current_layer_->children[function_name].layer = new_layer;
 
         // Set the current layer to be this new layer
         current_layer_ = new_layer;
@@ -73,20 +74,20 @@ void Timer::tic(string function_name){
 // ================================================================================
 // ================================================================================
 
-long int Timer::toc(string function_name){        
+void Timer::toc(string function_name){        
     // Find the duration since the last tic
     chronoTime now  = std::chrono::high_resolution_clock::now();
-    long int duration = std::chrono::duration_cast<std::chrono::microseconds>(now - start_times_.back()).count();
+    // long int duration = std::chrono::duration_cast<std::chrono::microseconds>(now - start_times_.back()).count();
+    chronoDuration duration = now - start_times_.back();
 
     // Move up a layer if possible
     if (current_layer_->layer_index != 0){
-        current_layer_->parent->durations[function_name] += duration;
+        current_layer_->parent->children[function_name].duration += duration;
         current_layer_ = current_layer_->parent;
     }
 
     // Now that we've used the most recent start time, we can get rid of it
     start_times_.pop_back();
-    return duration;
 }
 
 // ================================================================================
@@ -98,25 +99,37 @@ void Timer::summary(){
     assert(start_times_.empty());
 
     // Show the full function tree
-    std::cout << "\n===== FUNCTION BREAKDOWN =====\n";
+    std::cout << "\n===== FUNCTION BREAKDOWN =====\n\n";
     printLayer_(current_layer_);
 
     // Show the total time spent on each function, regardless of parent/child times
     std::cout << "\n===== SUMMARY =====\n";
-    durationMap totals = getTotals_(current_layer_);
-    for (std::pair<std::string, double> p : totals){
+    std::cout << "\t\t\t\tTotal Time   |  Times Called   |   Average Time\n";
+    timerTotal totals = getTotals_(current_layer_);
+    for (const auto &p : totals){
         std::string name = p.first;
-        int duration     = round(p.second/1000);
+        long int duration = std::chrono::duration_cast<std::chrono::milliseconds>(p.second.second).count();
+        long int specific_duration = std::chrono::duration_cast<std::chrono::microseconds>(p.second.second).count();
+        int call_count = p.second.first;
 
         // How many tabs to do before printing time
         int tab_count = (name.length() + 1)/8;
         // Used to align times
-        int space_count = 6 - (int)floor(log10(p.second/1000.0));
+        int space_count = 6 - (int)floor(log10(duration));
+        int call_space_count = 6 - (int)floor(log10(call_count));
+        int avg_space_count = 8 - (int)floor(log10(specific_duration/p.second.first));
+        // Correct for log domain error
+        if (duration == 0) space_count = 5;
+        if (specific_duration == 0) avg_space_count = 7;
 
         std::cout << name << ":";
         for(int i = 0; i < 4-tab_count; i++) std::cout << "\t";
         for(int i = 0; i < space_count; i++) std::cout << " ";
-        printf("%d ms\n", duration);
+        std::cout << duration << " ms   |";
+        for(int i = 0; i < call_space_count + 7; i++) std::cout << " ";
+        std::cout << call_count << "   |";
+        for(int i = 0; i < avg_space_count + 2; i++) std::cout << " ";
+        std::cout << specific_duration/p.second.first << " us" << std::endl; 
     }
     std::cout << std::endl;
 }
@@ -125,17 +138,18 @@ void Timer::summary(){
 // ================================================================================
 
 void Timer::printLayer_(const LayerPtr& layer, int prev_duration){
-    for (const std::pair<std::string, LayerPtr> &p : layer->children){
+    for (const std::pair<std::string, Child> &p : layer->children){
         // Get the child layer info
         std::string name = p.first;
-        LayerPtr child   = p.second;
-        int duration     = (int)round(layer->durations[name]/1000.0);
+        LayerPtr child   = p.second.layer;
+        // int duration     = (int)round(layer->durations[name]/1000.0);
+        long int duration = std::chrono::duration_cast<std::chrono::milliseconds>(p.second.duration).count();
         prev_duration   -= duration;
 
         // To make it look pretty
         for(int i = 0; i < layer->layer_index; i++) std::cout << "     ";
         if (layer->layer_index > 0) std::cout << "|--- ";
-        std::cout << name << ": " << duration << " ms\n";
+        std::cout << name << " (" << p.second.call_count << "): " << duration << " ms\n";
 
         // If this child has children, repeat
         if (not child->children.empty()){
@@ -153,17 +167,20 @@ void Timer::printLayer_(const LayerPtr& layer, int prev_duration){
 // ================================================================================
 // ================================================================================
 
-durationMap Timer::getTotals_(LayerPtr layer){
-    static durationMap totals;
-    for (const std::pair<std::string, LayerPtr> &p : layer->children){
+timerTotal Timer::getTotals_(LayerPtr layer){
+    static timerTotal totals;
+    for (const std::pair<std::string, Child> &p : layer->children){
         // Get the child layer info
         std::string name = p.first;
-        LayerPtr child   = p.second;
+        LayerPtr child   = p.second.layer;
 
         if (totals.count(name)){
-            totals[name] += layer->durations[name];
+            totals[name].first  += layer->children[name].call_count;
+            totals[name].second += layer->children[name].duration;
         }else{
-            totals[name] = layer->durations[name];
+            totals[name] = std::pair<int, chronoDuration>();
+            totals[name].first  = layer->children[name].call_count;
+            totals[name].second = layer->children[name].duration;
         }
 
         // If this child has children, repeat
