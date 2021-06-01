@@ -42,6 +42,9 @@ include_directories(
 ## Declare a C++ library
 add_library(cpp_timer src/Timer.cpp)
 
+add_executable(example src/example.cpp)
+target_link_libraries(example cpp_timer)
+
 #############
 ## Install ##
 #############
