@@ -99,7 +99,7 @@ void Timer::summary(){
     assert(start_times_.empty());
 
     // Show the full function tree
-    std::cout << "\n===== FUNCTION BREAKDOWN =====\n\n";
+    std::cout << "\n===== FUNCTION BREAKDOWN =====";
     printLayer_(current_layer_);
 
     // Show the total time spent on each function, regardless of parent/child times
@@ -107,15 +107,17 @@ void Timer::summary(){
     std::cout << "\t\t\t\tTotal Time   |  Times Called   |   Average Time\n";
     timerTotal totals = getTotals_(current_layer_);
     for (const auto &p : totals){
-        std::string name = p.first;
-        long int duration = std::chrono::duration_cast<std::chrono::milliseconds>(p.second.second).count();
-        long int specific_duration = std::chrono::duration_cast<std::chrono::microseconds>(p.second.second).count();
-        int call_count = p.second.first;
-        int avg_time   = specific_duration/call_count;
+        std::string name    = p.first;
+        long long  duration = std::chrono::duration_cast<std::chrono::nanoseconds>(p.second.second).count();
+        int call_count      = p.second.first;
+        long long avg_time  = duration/call_count;
 
         // Adjust units
-        std::string unit = (avg_time < 10000 ? " us" : " ms");
-        avg_time         = (avg_time < 10000 ? avg_time : avg_time/1000);
+        std::string total_unit = (duration < 1000 ? " ns" : duration < 1000000 ? " us" : " ms");
+        duration               = (duration < 1000 ? duration : duration < 1000000 ? duration/1000 : duration/1000000);
+
+        std::string avg_unit = (avg_time < 1000 ? " ns" : avg_time < 1000000 ? " us" : " ms");
+        avg_time             = (avg_time < 1000 ? avg_time : avg_time < 1000000 ? avg_time/1000 : avg_time/1000000);
 
         // How many tabs to do before printing time
         int tab_count = (name.length() + 1)/8;
@@ -124,17 +126,17 @@ void Timer::summary(){
         int call_space_count = 6 - (int)floor(log10(call_count));
         int avg_space_count = 8 - (int)floor(log10(avg_time));
         // Correct for log domain error
-        if (duration == 0) space_count = 5;
-        if (avg_time == 0) avg_space_count = 7;
+        if (duration == 0) space_count = 6;
+        if (avg_time == 0) avg_space_count = 8;
 
         std::cout << name << ":";
         for(int i = 0; i < 4-tab_count; i++) std::cout << "\t";
         for(int i = 0; i < space_count; i++) std::cout << " ";
-        std::cout << duration << " ms   |";
+        std::cout << duration << total_unit << "   |";
         for(int i = 0; i < call_space_count + 7; i++) std::cout << " ";
         std::cout << call_count << "   |";
         for(int i = 0; i < avg_space_count + 2; i++) std::cout << " ";
-        std::cout << avg_time << unit << std::endl; 
+        std::cout << avg_time << avg_unit << std::endl; 
     }
     std::cout << std::endl;
 }
@@ -154,6 +156,8 @@ void Timer::printLayer_(const LayerPtr& layer, int prev_duration){
         // To make it look pretty
         for(int i = 0; i < layer->layer_index; i++) std::cout << "     ";
         if (layer->layer_index > 0) std::cout << "|--- ";
+        else std::cout << "\n";
+
         std::cout << name << " (" << p.second.call_count << "): " << duration << " ms\n";
 
         // If this child has children, repeat
