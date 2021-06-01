@@ -111,16 +111,21 @@ void Timer::summary(){
         long int duration = std::chrono::duration_cast<std::chrono::milliseconds>(p.second.second).count();
         long int specific_duration = std::chrono::duration_cast<std::chrono::microseconds>(p.second.second).count();
         int call_count = p.second.first;
+        int avg_time   = specific_duration/call_count;
+
+        // Adjust units
+        std::string unit = (avg_time < 10000 ? " us" : " ms");
+        avg_time         = (avg_time < 10000 ? avg_time : avg_time/1000);
 
         // How many tabs to do before printing time
         int tab_count = (name.length() + 1)/8;
         // Used to align times
         int space_count = 6 - (int)floor(log10(duration));
         int call_space_count = 6 - (int)floor(log10(call_count));
-        int avg_space_count = 8 - (int)floor(log10(specific_duration/p.second.first));
+        int avg_space_count = 8 - (int)floor(log10(avg_time));
         // Correct for log domain error
         if (duration == 0) space_count = 5;
-        if (specific_duration == 0) avg_space_count = 7;
+        if (avg_time == 0) avg_space_count = 7;
 
         std::cout << name << ":";
         for(int i = 0; i < 4-tab_count; i++) std::cout << "\t";
@@ -129,7 +134,7 @@ void Timer::summary(){
         for(int i = 0; i < call_space_count + 7; i++) std::cout << " ";
         std::cout << call_count << "   |";
         for(int i = 0; i < avg_space_count + 2; i++) std::cout << " ";
-        std::cout << specific_duration/p.second.first << " us" << std::endl; 
+        std::cout << avg_time << unit << std::endl; 
     }
     std::cout << std::endl;
 }
