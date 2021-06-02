@@ -10,7 +10,7 @@ add_compile_options(-std=c++14)
 find_package(catkin REQUIRED COMPONENTS)
 
 ## System dependencies are found with CMake's conventions
-# find_package(Boost REQUIRED COMPONENTS system)
+find_package(Boost REQUIRED COMPONENTS system)
 
 ###################################
 ## catkin specific configuration ##
@@ -41,6 +41,9 @@ include_directories(
 
 ## Declare a C++ library
 add_library(cpp_timer src/Timer.cpp)
+
+add_executable(example src/example.cpp)
+target_link_libraries(example cpp_timer)
 
 #############
 ## Install ##

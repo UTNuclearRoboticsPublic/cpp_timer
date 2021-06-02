@@ -39,6 +39,10 @@
 #include <memory>
 #include <assert.h>
 #include <iostream>
+#include "boost/current_function.hpp"
+
+#define TIMER_TIC cpp_timer::Timer::tic(BOOST_CURRENT_FUNCTION)
+#define TIMER_TOC cpp_timer::Timer::toc(BOOST_CURRENT_FUNCTION)
 
 namespace cpp_timer{
 
@@ -48,14 +52,23 @@ struct Layer;
 // Typedefs for readability
 typedef std::shared_ptr<cpp_timer::Layer> LayerPtr;
 typedef std::chrono::high_resolution_clock::time_point chronoTime;
-typedef std::map<std::string, long int> durationMap;
+typedef std::chrono::duration<long int, std::nano> chronoDuration;
+typedef std::map<std::string, chronoDuration> durationMap;
 typedef std::map<std::string, LayerPtr> layerMap;
+typedef std::map<std::string, std::pair<int, chronoDuration>> timerTotal;
+
+struct Child{
+    chronoDuration duration;
+    int call_count = 1;
+    LayerPtr layer;
+};
 
 struct Layer{
     int layer_index;
-    durationMap durations;
-    layerMap children;
+    // durationMap durations;
+    // layerMap children;
     LayerPtr parent;
+    std::map<std::string, Child> children;
 };
 
 class Timer{
@@ -82,7 +95,7 @@ public:
      *                          Does not have to match the actual function name
      * @return                  Duration of function call in microseconds
      */
-    long int toc(std::string function_name);
+    void toc(std::string function_name);
 
     /**
      * Show the summary of the all of the timer calls. All tic() calls must be closed
@@ -112,7 +125,7 @@ private:
     /**
      * Get the total time spent in a layer through recursive calculation
      */
-    durationMap getTotals_(LayerPtr layer);
+    timerTotal getTotals_(LayerPtr layer);
 };
 
 }   // namespace cpp_timer
