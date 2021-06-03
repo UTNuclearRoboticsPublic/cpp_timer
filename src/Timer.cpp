@@ -27,9 +27,24 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+#include <map>
 #include "cpp_timer/Timer.h"
 
 using std::string;
+
+namespace{ 
+    std::map<string, string> colours = {{"red",     "\e[1;31m"}, 
+                                        {"green",   "\e[1;32m"},
+                                        {"yellow",  "\e[1;33m"},
+                                        {"blue",    "\e[1;34m"},
+                                        {"magenta", "\e[1;35m"},
+                                        {"cyan",    "\e[1;36m"},
+                                        {"while",   "\e[1;37m"},
+    };
+
+    // string reset = "\e[0m";
+    string reset = "\e[0;36m";
+}
 
 namespace cpp_timer{
 
@@ -99,12 +114,12 @@ void Timer::summary(){
     assert(start_times_.empty());
 
     // Show the full function tree
-    std::cout << "\n===== FUNCTION BREAKDOWN =====";
+    std::cout << colours["cyan"] << "\n============================= FUNCTION BREAKDOWN =============================" << reset;
     printLayer_(current_layer_);
 
     // Show the total time spent on each function, regardless of parent/child times
-    std::cout << "\n===== SUMMARY =====\n";
-    std::cout << "\t\t\t\tTotal Time   |  Times Called   |   Average Time\n";
+    std::cout << colours["cyan"] << "\n=================================== SUMMARY ===================================\n";
+    std::cout << "\t\t\t\tTotal Time   |  Times Called   |   Average Time\n" << reset;
     timerTotal totals = getTotals_(current_layer_);
     for (const auto &p : totals){
         std::string name    = p.first;
@@ -112,31 +127,71 @@ void Timer::summary(){
         int call_count      = p.second.first;
         long long avg_time  = duration/call_count;
 
+        // For each measurement we need a unit, a value and a colour to print with
+        string total_colour, call_colour, avg_colour;
+        string total_unit, avg_unit;
+        uint total_time;
+
+        if (duration < 1e3){
+            total_unit   = " ns";
+            total_colour = colours["cyan"]; //colours["green"];
+            total_time   = duration;
+        }else if (duration < 1e6){
+            total_unit   = " us";
+            total_colour = colours["cyan"]; //colours["blue"];
+            total_time   = duration/1e3;
+        }else if (duration < 1e9){
+            total_unit   = " ms";
+            total_colour = colours["cyan"]; //colours["yellow"];
+            total_time   = duration/1e6;
+        }else{
+            total_unit   = " ms";
+            total_colour = colours["cyan"]; //colours["red"];
+            total_time   = duration/1e6;
+        }
+
+        if (avg_time < 1e3){
+            avg_unit   = " ns";
+            avg_colour = colours["cyan"]; //colours["green"];
+        }else if (avg_time < 1e6){
+            avg_unit   = " us";
+            avg_colour = colours["cyan"]; //colours["blue"];
+            avg_time   = avg_time/1e3;
+        }else if (avg_time < 1e9){
+            avg_unit   = " ms";
+            avg_colour = colours["cyan"]; //colours["yellow"];
+            avg_time   = avg_time/1e6;
+        }else{
+            avg_unit   = " ms";
+            avg_colour = colours["cyan"]; //colours["red"];
+            avg_time   = avg_time/1e6;
+        }
+
         // Adjust units
-        std::string total_unit = (duration < 1000 ? " ns" : duration < 1000000 ? " us" : " ms");
-        duration               = (duration < 1000 ? duration : duration < 1000000 ? duration/1000 : duration/1000000);
+        // string total_unit = (duration < 1000 ? " ns" : duration < 1000000 ? " us" : " ms");
+        // duration          = (duration < 1000 ? duration : duration < 1000000 ? duration/1000 : duration/1000000);
 
-        std::string avg_unit = (avg_time < 1000 ? " ns" : avg_time < 1000000 ? " us" : " ms");
-        avg_time             = (avg_time < 1000 ? avg_time : avg_time < 1000000 ? avg_time/1000 : avg_time/1000000);
+        // string avg_unit = (avg_time < 1000 ? " ns" : avg_time < 1000000 ? " us" : " ms");
+        // avg_time        = (avg_time < 1000 ? avg_time : avg_time < 1000000 ? avg_time/1000 : avg_time/1000000);
 
-        // How many tabs to do before printing time
-        int tab_count = (name.length() + 1)/8;
         // Used to align times
-        int space_count = 6 - (int)floor(log10(duration));
-        int call_space_count = 6 - (int)floor(log10(call_count));
-        int avg_space_count = 8 - (int)floor(log10(avg_time));
+        int pre_space_count  = 32 - (name.length() + 1);
+        int space_count      =  6 - (int)floor(log10(total_time));
+        int call_space_count =  6 - (int)floor(log10(call_count));
+        int avg_space_count  =  8 - (int)floor(log10(avg_time));
+        
         // Correct for log domain error
-        if (duration == 0) space_count = 6;
+        if (total_time == 0) space_count = 6;
         if (avg_time == 0) avg_space_count = 8;
 
         std::cout << name << ":";
-        for(int i = 0; i < 4-tab_count; i++) std::cout << "\t";
+        for(int i = 0; i < pre_space_count; i++) std::cout << " ";
         for(int i = 0; i < space_count; i++) std::cout << " ";
-        std::cout << duration << total_unit << "   |";
+        std::cout << total_colour << total_time << total_unit << reset << "   |";
         for(int i = 0; i < call_space_count + 7; i++) std::cout << " ";
-        std::cout << call_count << "   |";
-        for(int i = 0; i < avg_space_count + 2; i++) std::cout << " ";
-        std::cout << avg_time << avg_unit << std::endl; 
+        std::cout << colours["cyan"] << call_count << reset << "   |";
+        for(int i = 0; i < avg_space_count + 3; i++) std::cout << " ";
+        std::cout << avg_colour << avg_time << avg_unit << reset << std::endl; 
     }
     std::cout << std::endl;
 }
@@ -158,7 +213,7 @@ void Timer::printLayer_(const LayerPtr& layer, int prev_duration){
         if (layer->layer_index > 0) std::cout << "|--- ";
         else std::cout << "\n";
 
-        std::cout << name << " (" << p.second.call_count << "): " << duration << " ms\n";
+        std::cout << name << " (" << p.second.call_count << "): " << colours["cyan"] << duration << " ms\n" << reset;
 
         // If this child has children, repeat
         if (not child->children.empty()){
@@ -169,7 +224,7 @@ void Timer::printLayer_(const LayerPtr& layer, int prev_duration){
     if (prev_duration > 0){
         for(int i = 0; i < layer->layer_index; i++) std::cout << "     ";
         if (layer->layer_index > 0) std::cout << "|--- ";
-        std::cout << "other: " << prev_duration << " ms\n";
+        std::cout << "other: " << colours["cyan"] << prev_duration << " ms\n" << reset;
     }
 }
 
