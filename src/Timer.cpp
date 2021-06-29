@@ -193,7 +193,7 @@ void Timer::summary(){
         for(int i = 0; i < avg_space_count + 3; i++) std::cout << " ";
         std::cout << avg_colour << avg_time << avg_unit << reset << std::endl; 
     }
-    std::cout << std::endl;
+    std::cout << reset << std::endl;
 }
 
 // ================================================================================

@@ -41,6 +41,7 @@
 #include <iostream>
 #include "boost/current_function.hpp"
 
+// You need to define TIMER_INSTANCE in your own implementation file
 #define TIMER_TIC TIMER_INSTANCE.tic(BOOST_CURRENT_FUNCTION)
 #define TIMER_TOC TIMER_INSTANCE.toc(BOOST_CURRENT_FUNCTION)
 
