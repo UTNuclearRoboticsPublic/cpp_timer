@@ -44,6 +44,30 @@ namespace{
 
     // string reset = "\e[0m";
     string reset = "\e[0;36m";
+
+    std::string parseFunctionName(std::string name){
+        // Find the first instance of a space (the type of the function)
+        size_t first_space  = name.find(" ");
+        if (first_space == string::npos){
+            return name;
+        }
+
+        // Find the second instance of a space (the name of the function)
+        size_t second_space = name.find(" ", first_space+1);
+        if (second_space == string::npos){
+            return name;
+        }
+
+
+        // Find the last '::' before this space
+        size_t last_pos = name.find_last_of(":", second_space);
+        if (last_pos == string::npos){
+            last_pos = first_space - 1;
+        }
+
+        std::string name_simple = name.substr(last_pos + 2, second_space - last_pos - 2);
+        return name_simple;
+    }
 }
 
 namespace cpp_timer{
@@ -122,7 +146,7 @@ void Timer::summary(){
     std::cout << "\t\t\t\tTotal Time   |  Times Called   |   Average Time\n" << reset;
     timerTotal totals = getTotals_(current_layer_);
     for (const auto &p : totals){
-        std::string name    = p.first;
+        std::string name    = parseFunctionName(p.first);
         long long  duration = std::chrono::duration_cast<std::chrono::nanoseconds>(p.second.second).count();
         int call_count      = p.second.first;
         long long avg_time  = duration/call_count;
