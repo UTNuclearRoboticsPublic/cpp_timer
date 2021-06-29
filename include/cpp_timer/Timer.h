@@ -41,8 +41,8 @@
 #include <iostream>
 #include "boost/current_function.hpp"
 
-#define TIMER_TIC cpp_timer::Timer::tic(BOOST_CURRENT_FUNCTION)
-#define TIMER_TOC cpp_timer::Timer::toc(BOOST_CURRENT_FUNCTION)
+#define TIMER_TIC TIMER_INSTANCE.tic(BOOST_CURRENT_FUNCTION)
+#define TIMER_TOC TIMER_INSTANCE.toc(BOOST_CURRENT_FUNCTION)
 
 namespace cpp_timer{
 
