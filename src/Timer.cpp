@@ -31,6 +31,8 @@
 #include "cpp_timer/Timer.h"
 
 using std::string;
+using std::cout;
+using std::endl;
 
 namespace{ 
     std::map<string, string> colours = {{"red",     "\e[1;31m"}, 
@@ -45,27 +47,31 @@ namespace{
     // string reset = "\e[0m";
     string reset = "\e[0;36m";
 
-    std::string parseFunctionName(std::string name){
-        // Find the first instance of a space (the type of the function)
-        size_t first_space  = name.find(" ");
-        if (first_space == string::npos){
+    string parseFunctionName(string name){
+        // Generally a function name has the form 
+        // type namespace1::namespace2::...::namespacen::functionName (args)
+        //     ^                                        ^             ^
+        // The caret symbols above show where the characters of interest are
+
+        // Find the first instance of a space
+        size_t space  = name.find(" ");
+        if (space == string::npos){
             return name;
         }
 
-        // Find the second instance of a space (the name of the function)
-        size_t second_space = name.find(" ", first_space+1);
-        if (second_space == string::npos){
+        // Find the fist instance of a "("
+        size_t bracket = name.find("(", space+1);
+        if (bracket == string::npos){
             return name;
         }
-
-
-        // Find the last '::' before this space
-        size_t last_pos = name.find_last_of(":", second_space);
+        // Find the last '::' before this "("
+        size_t last_pos = name.find_last_of(":", bracket);
         if (last_pos == string::npos){
-            last_pos = first_space - 1;
+            last_pos = space;
         }
 
-        std::string name_simple = name.substr(last_pos + 2, second_space - last_pos - 2);
+        // Return just the simplified version of the function name
+        string name_simple = name.substr(last_pos + 1, bracket - last_pos - 1);
         return name_simple;
     }
 }
@@ -217,7 +223,7 @@ void Timer::summary(){
         for(int i = 0; i < avg_space_count + 3; i++) std::cout << " ";
         std::cout << avg_colour << avg_time << avg_unit << reset << std::endl; 
     }
-    std::cout << reset << std::endl;
+    std::cout << reset << " " << std::endl;
 }
 
 // ================================================================================
@@ -226,7 +232,7 @@ void Timer::summary(){
 void Timer::printLayer_(const LayerPtr& layer, int prev_duration){
     for (const std::pair<std::string, Child> &p : layer->children){
         // Get the child layer info
-        std::string name = p.first;
+        std::string name = parseFunctionName(p.first);
         LayerPtr child   = p.second.layer;
         // int duration     = (int)round(layer->durations[name]/1000.0);
         long int duration = std::chrono::duration_cast<std::chrono::milliseconds>(p.second.duration).count();
