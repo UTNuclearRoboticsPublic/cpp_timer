@@ -85,35 +85,43 @@ Timer::Timer(){
     start_times_.reserve(10);
     current_layer_ = LayerPtr(new Layer);
     current_layer_->layer_index = 0;
+
+    all_layers_.reserve(100);
+    all_layers_.push_back(current_layer_);
 }
 
 // ================================================================================
 // ================================================================================
 
 void Timer::tic(string function_name){
+    chronoTime tic_start = std::chrono::steady_clock::now();
+
     // If there is already a layer for the function in this framework, move to it
     if (current_layer_->children.count(function_name)){
-        current_layer_->children[function_name].call_count++;
-        current_layer_ = current_layer_->children[function_name].layer;
+        current_layer_->children[function_name]->call_count++;
+        current_layer_ = current_layer_->children[function_name];
     }
     
     // Otherwise, create a new layer with the current layer as the parent
     else{
         LayerPtr new_layer(new Layer);
+        all_layers_.push_back(new_layer);
 
         // Assign the new layer parameters
         new_layer->layer_index = current_layer_->layer_index + 1;
         
         // Update the parent-child relations
         new_layer->parent = current_layer_;
-        current_layer_->children[function_name].layer = new_layer;
+        current_layer_->children[function_name] = new_layer;
 
         // Set the current layer to be this new layer
         current_layer_ = new_layer;
     }
 
-    // Record the start time
-    start_times_.push_back(std::chrono::high_resolution_clock::now());
+    // Record the duration of the tic and the start time of the function
+    chronoTime tic_end = std::chrono::steady_clock::now();
+    current_layer_->parent->child_tic_duration += (tic_end - tic_start);
+    start_times_.push_back(tic_end);
 }
 
 // ================================================================================
@@ -121,18 +129,20 @@ void Timer::tic(string function_name){
 
 void Timer::toc(string function_name){        
     // Find the duration since the last tic
-    chronoTime now  = std::chrono::high_resolution_clock::now();
-    // long int duration = std::chrono::duration_cast<std::chrono::microseconds>(now - start_times_.back()).count();
-    chronoDuration duration = now - start_times_.back();
+    chronoTime toc_start_time = std::chrono::steady_clock::now();
+    chronoDuration duration = toc_start_time - start_times_.back();
 
     // Move up a layer if possible
     if (current_layer_->layer_index != 0){
-        current_layer_->parent->children[function_name].duration += duration;
+        current_layer_->parent->children[function_name]->duration += duration;
         current_layer_ = current_layer_->parent;
     }
 
     // Now that we've used the most recent start time, we can get rid of it
     start_times_.pop_back();
+
+    // Record the time spent in the toc function
+    current_layer_->child_tic_duration += (std::chrono::steady_clock::now() - toc_start_time);
 }
 
 // ================================================================================
@@ -143,6 +153,13 @@ void Timer::summary(){
     assert(current_layer_->layer_index == 0);
     assert(start_times_.empty());
 
+    LayerPtr* current_layer_ptr_ptr = &current_layer_;
+
+    // For each layer, subtract the tic-toc times of child layers
+    for (LayerPtr &p : all_layers_){
+        p->duration -= getChildTicTocTime_(p);
+    }
+
     // Show the full function tree
     std::cout << colours["cyan"] << "\n============================= FUNCTION BREAKDOWN =============================" << reset;
     printLayer_(current_layer_);
@@ -151,9 +168,9 @@ void Timer::summary(){
     std::cout << colours["cyan"] << "\n=================================== SUMMARY ===================================\n";
     std::cout << "\t\t\t\tTotal Time   |  Times Called   |   Average Time\n" << reset;
     timerTotal totals = getTotals_(current_layer_);
-    for (const auto &p : totals){
+    for (const std::pair<std::string, std::pair<int, chronoDuration>> &p : totals){
         std::string name    = parseFunctionName(p.first);
-        long long  duration = std::chrono::duration_cast<std::chrono::nanoseconds>(p.second.second).count();
+        long long  duration = p.second.second.count();
         int call_count      = p.second.first;
         long long avg_time  = duration/call_count;
 
@@ -197,13 +214,6 @@ void Timer::summary(){
             avg_time   = avg_time/1e6;
         }
 
-        // Adjust units
-        // string total_unit = (duration < 1000 ? " ns" : duration < 1000000 ? " us" : " ms");
-        // duration          = (duration < 1000 ? duration : duration < 1000000 ? duration/1000 : duration/1000000);
-
-        // string avg_unit = (avg_time < 1000 ? " ns" : avg_time < 1000000 ? " us" : " ms");
-        // avg_time        = (avg_time < 1000 ? avg_time : avg_time < 1000000 ? avg_time/1000 : avg_time/1000000);
-
         // Used to align times
         int pre_space_count  = 32 - (name.length() + 1);
         int space_count      =  6 - (int)floor(log10(total_time));
@@ -230,20 +240,19 @@ void Timer::summary(){
 // ================================================================================
 
 void Timer::printLayer_(const LayerPtr& layer, int prev_duration){
-    for (const std::pair<std::string, Child> &p : layer->children){
+    for (const std::pair<std::string, LayerPtr> &p : layer->children){
         // Get the child layer info
-        std::string name = parseFunctionName(p.first);
-        LayerPtr child   = p.second.layer;
-        // int duration     = (int)round(layer->durations[name]/1000.0);
-        long int duration = std::chrono::duration_cast<std::chrono::milliseconds>(p.second.duration).count();
-        prev_duration   -= duration;
+        std::string name  = parseFunctionName(p.first);
+        LayerPtr child    = p.second;
+        long int duration = std::chrono::duration_cast<std::chrono::milliseconds>(p.second->duration).count();
+        prev_duration    -= duration;
 
         // To make it look pretty
         for(int i = 0; i < layer->layer_index; i++) std::cout << "     ";
         if (layer->layer_index > 0) std::cout << "|--- ";
         else std::cout << "\n";
 
-        std::cout << name << " (" << p.second.call_count << "): " << colours["cyan"] << duration << " ms\n" << reset;
+        std::cout << name << " (" << p.second->call_count << "): " << colours["cyan"] << duration << " ms\n" << reset;
 
         // If this child has children, repeat
         if (not child->children.empty()){
@@ -263,18 +272,18 @@ void Timer::printLayer_(const LayerPtr& layer, int prev_duration){
 
 timerTotal Timer::getTotals_(LayerPtr layer){
     static timerTotal totals;
-    for (const std::pair<std::string, Child> &p : layer->children){
+    for (const std::pair<std::string, LayerPtr> &p : layer->children){
         // Get the child layer info
         std::string name = p.first;
-        LayerPtr child   = p.second.layer;
+        LayerPtr child   = p.second;
 
         if (totals.count(name)){
-            totals[name].first  += layer->children[name].call_count;
-            totals[name].second += layer->children[name].duration;
+            totals[name].first  += layer->children[name]->call_count;
+            totals[name].second += layer->children[name]->duration;
         }else{
             totals[name] = std::pair<int, chronoDuration>();
-            totals[name].first  = layer->children[name].call_count;
-            totals[name].second = layer->children[name].duration;
+            totals[name].first  = layer->children[name]->call_count;
+            totals[name].second = layer->children[name]->duration;
         }
 
         // If this child has children, repeat
@@ -288,5 +297,18 @@ timerTotal Timer::getTotals_(LayerPtr layer){
 
 // ================================================================================
 // ================================================================================
+
+chronoDuration Timer::getChildTicTocTime_(LayerPtr layer){
+    // Get the time spent in tic-tocs for direct descendants
+    chronoDuration child_tic_toc_dur = layer->child_tic_duration;
+
+    // Get the time spent in tic-tocs for subsequenct descendents
+    for (const std::pair<std::string, LayerPtr> &p : layer->children){
+        LayerPtr child = p.second;
+        child_tic_toc_dur += getChildTicTocTime_(child);
+    }
+
+    return child_tic_toc_dur;
+}
 
 } // namespace cpp_timer

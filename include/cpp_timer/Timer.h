@@ -52,24 +52,21 @@ struct Layer;
 
 // Typedefs for readability
 typedef std::shared_ptr<cpp_timer::Layer> LayerPtr;
-typedef std::chrono::high_resolution_clock::time_point chronoTime;
+typedef std::chrono::steady_clock::time_point chronoTime;
 typedef std::chrono::duration<long int, std::nano> chronoDuration;
 typedef std::map<std::string, chronoDuration> durationMap;
 typedef std::map<std::string, LayerPtr> layerMap;
 typedef std::map<std::string, std::pair<int, chronoDuration>> timerTotal;
 
-struct Child{
-    chronoDuration duration;
-    int call_count = 1;
-    LayerPtr layer;
-};
+// TODO: Add call time to either Child or Layer and measure at runtime
 
 struct Layer{
     int layer_index;
-    // durationMap durations;
-    // layerMap children;
+    int call_count = 1;
     LayerPtr parent;
-    std::map<std::string, Child> children;
+    layerMap children;
+    chronoDuration duration;
+    chronoDuration child_tic_duration;
 };
 
 class Timer{
@@ -108,6 +105,7 @@ public:
     void summary();
 
 private:
+
     /**
      * Pointer to the current layer
      */
@@ -119,6 +117,11 @@ private:
     std::vector<chronoTime> start_times_;
 
     /**
+     * Vector of all layers in the problem
+     */
+    std::vector<LayerPtr> all_layers_;
+
+    /**
      * Recursively print a layer and all of it's children
      */
     void printLayer_(const LayerPtr& layer, int prev_duration = 0);
@@ -127,6 +130,16 @@ private:
      * Get the total time spent in a layer through recursive calculation
      */
     timerTotal getTotals_(LayerPtr layer);
+
+    /**
+     * Get the total times tic-toc pairs were called in children to a layer
+     */
+    chronoDuration getChildTicTocTime_(LayerPtr layer);
+
+    /**
+     * Get pointers to all children in the class
+     */
+    // void getAllChildren_(std::vector<Child*> &output);
 };
 
 }   // namespace cpp_timer
