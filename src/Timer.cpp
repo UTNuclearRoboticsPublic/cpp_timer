@@ -45,7 +45,6 @@ namespace{
     };
 
     string reset = "\e[0m";
-    // string reset = "\e[0;36m";
 
     string parseFunctionName(string name){
         // Generally a function name has the form 
@@ -164,13 +163,18 @@ void Timer::summary(){
         p->duration -= getChildTicTocTime_(p);
     }
 
+    // Now reset this child time so that subsequent calls to summary() don't repeat the action
+    for (LayerPtr &p : all_layers_){
+        p->child_tic_duration = p->child_tic_duration.zero();
+    }
+
     // Show the full function tree
-    std::cout << colours["green"] << "\n============================= FUNCTION BREAKDOWN =============================" << reset;
+    std::cout << colours["green"] << "\n============================= FUNCTION BREAKDOWN =============================\n" << reset;
     printLayer_(current_layer_);
 
     // Show the total time spent on each function, regardless of parent/child times
-    std::cout << colours["green"] << "\n=================================== SUMMARY ===================================\n" << colours["magenta"];
-    std::cout << "\t\t\t\tTotal Time   |  Times Called   |   Average Time\n" << reset;
+    std::cout << colours["green"]   << "\n\n=================================== SUMMARY ===================================\n";
+    std::cout << colours["magenta"] << "\t\t\t\tTotal Time   |  Times Called   |   Average Time\n" << reset;
     timerTotal totals = getTotals_(current_layer_);
     for (const std::pair<std::string, std::pair<int, chronoDuration>> &p : totals){
         std::string name    = parseFunctionName(p.first);
@@ -203,17 +207,21 @@ void Timer::summary(){
 
         if (avg_time < 1e3){
             avg_unit   = " ns";
+            // avg_colour = colours["blue"];
             avg_colour = colours["cyan"]; //colours["green"];
         }else if (avg_time < 1e6){
             avg_unit   = " us";
+            // avg_colour = colours["green"];
             avg_colour = colours["cyan"]; //colours["blue"];
             avg_time   = avg_time/1e3;
         }else if (avg_time < 1e9){
             avg_unit   = " ms";
+            // avg_colour = colours["yellow"];
             avg_colour = colours["cyan"]; //colours["yellow"];
             avg_time   = avg_time/1e6;
         }else{
             avg_unit   = " ms";
+            // avg_colour = colours["red"];
             avg_colour = colours["cyan"]; //colours["red"];
             avg_time   = avg_time/1e6;
         }
@@ -244,6 +252,8 @@ void Timer::summary(){
 // ================================================================================
 
 void Timer::printLayer_(const LayerPtr& layer, int prev_duration){
+    static int base_count = 1;
+
     for (const std::pair<std::string, LayerPtr> &p : layer->children){
         // Get the child layer info
         std::string name  = parseFunctionName(p.first);
@@ -270,12 +280,16 @@ void Timer::printLayer_(const LayerPtr& layer, int prev_duration){
         if (layer->layer_index > 0) std::cout << colours["magenta"] << "|--- " << reset;
         else std::cout << "\n";
 
+        if (layer->layer_index == 0) cout << colours["green"] << base_count++ << ": " << reset;
         std::cout << name << colours["blue"] << " (" << p.second->call_count << "): " << colours["cyan"] << duration << unit << reset;
 
         // If this child has children, repeat
         if (not child->children.empty()){
             printLayer_(child, ns_dur);
         }
+
+        if (layer->layer_index == 0)
+            cout << colours["white"] << "______________________________________________________________________________\n";
     }
 
     // If the function body was at least 1ns, report it
@@ -307,9 +321,20 @@ timerTotal Timer::getTotals_(LayerPtr layer){
         std::string name = p.first;
         LayerPtr child   = p.second;
 
+        // Determine if the function is recursive
+        LayerPtr parent = layer;
+        bool is_recursive = false;
+        while (parent != all_layers_[0] and not is_recursive){
+            is_recursive = (parent->name == name);
+            parent = parent->parent;
+        }
+
+        // Note that subsequent recursive calls do not increase total time
         if (totals.count(name)){
             totals[name].first  += layer->children[name]->call_count;
-            totals[name].second += layer->children[name]->duration;
+            totals[name].second += layer->children[name]->duration * (not is_recursive);
+
+        // If we do not have this label yet, create a new entry for it
         }else{
             totals[name] = std::pair<int, chronoDuration>();
             totals[name].first  = layer->children[name]->call_count;
