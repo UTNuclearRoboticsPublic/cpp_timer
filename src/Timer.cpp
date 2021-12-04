@@ -41,11 +41,11 @@ namespace{
                                         {"blue",    "\e[1;34m"},
                                         {"magenta", "\e[1;35m"},
                                         {"cyan",    "\e[1;36m"},
-                                        {"while",   "\e[1;37m"},
+                                        {"white",   "\e[1;37m"},
     };
 
-    // string reset = "\e[0m";
-    string reset = "\e[0;36m";
+    string reset = "\e[0m";
+    // string reset = "\e[0;36m";
 
     string parseFunctionName(string name){
         // Generally a function name has the form 
@@ -56,7 +56,7 @@ namespace{
         // Find the first instance of a space
         size_t space  = name.find(" ");
         if (space == string::npos){
-            return name;
+            return name.substr(0, 31);
         }
 
         // Find the fist instance of a "("
@@ -72,7 +72,9 @@ namespace{
 
         // Return just the simplified version of the function name
         string name_simple = name.substr(last_pos + 1, bracket - last_pos - 1);
-        return name_simple;
+
+        // Keep the name inside 32 characters for formatting
+        return name_simple.substr(0,31);
     }
 }
 
@@ -85,6 +87,7 @@ Timer::Timer(){
     start_times_.reserve(10);
     current_layer_ = LayerPtr(new Layer);
     current_layer_->layer_index = 0;
+    current_layer_->name = "__TIMER_BASE_LAYER__";
 
     all_layers_.reserve(100);
     all_layers_.push_back(current_layer_);
@@ -109,6 +112,7 @@ void Timer::tic(string function_name){
 
         // Assign the new layer parameters
         new_layer->layer_index = current_layer_->layer_index + 1;
+        new_layer->name = function_name;
         
         // Update the parent-child relations
         new_layer->parent = current_layer_;
@@ -161,11 +165,11 @@ void Timer::summary(){
     }
 
     // Show the full function tree
-    std::cout << colours["cyan"] << "\n============================= FUNCTION BREAKDOWN =============================" << reset;
+    std::cout << colours["green"] << "\n============================= FUNCTION BREAKDOWN =============================" << reset;
     printLayer_(current_layer_);
 
     // Show the total time spent on each function, regardless of parent/child times
-    std::cout << colours["cyan"] << "\n=================================== SUMMARY ===================================\n";
+    std::cout << colours["green"] << "\n=================================== SUMMARY ===================================\n" << colours["magenta"];
     std::cout << "\t\t\t\tTotal Time   |  Times Called   |   Average Time\n" << reset;
     timerTotal totals = getTotals_(current_layer_);
     for (const std::pair<std::string, std::pair<int, chronoDuration>> &p : totals){
@@ -224,12 +228,12 @@ void Timer::summary(){
         if (total_time == 0) space_count = 6;
         if (avg_time == 0) avg_space_count = 8;
 
-        std::cout << name << ":";
+        std::cout << reset << name << ":" << colours["cyan"];
         for(int i = 0; i < pre_space_count; i++) std::cout << " ";
         for(int i = 0; i < space_count; i++) std::cout << " ";
-        std::cout << total_colour << total_time << total_unit << reset << "   |";
+        std::cout << total_colour << total_time << total_unit << colours["magenta"] << "   |";
         for(int i = 0; i < call_space_count + 7; i++) std::cout << " ";
-        std::cout << colours["cyan"] << call_count << reset << "   |";
+        std::cout << colours["cyan"] << call_count << colours["magenta"] << "   |";
         for(int i = 0; i < avg_space_count + 3; i++) std::cout << " ";
         std::cout << avg_colour << avg_time << avg_unit << reset << std::endl; 
     }
@@ -244,26 +248,52 @@ void Timer::printLayer_(const LayerPtr& layer, int prev_duration){
         // Get the child layer info
         std::string name  = parseFunctionName(p.first);
         LayerPtr child    = p.second;
-        long int duration = std::chrono::duration_cast<std::chrono::milliseconds>(p.second->duration).count();
+        long int duration = std::chrono::duration_cast<std::chrono::nanoseconds>(p.second->duration).count();
+        long int ns_dur   = duration;
+        string unit       = " ns\n";
         prev_duration    -= duration;
+
+        // If it's at least 1 us, use us instead
+        if (duration > 1000){
+            duration /= 1000;
+            unit     = " us\n";
+        }
+
+        // If it's at least 1 ms, use ms instead
+        if (duration > 1000){
+            duration /= 1000;
+            unit     = " ms\n";
+        }
 
         // To make it look pretty
         for(int i = 0; i < layer->layer_index; i++) std::cout << "     ";
-        if (layer->layer_index > 0) std::cout << "|--- ";
+        if (layer->layer_index > 0) std::cout << colours["magenta"] << "|--- " << reset;
         else std::cout << "\n";
 
-        std::cout << name << " (" << p.second->call_count << "): " << colours["cyan"] << duration << " ms\n" << reset;
+        std::cout << name << colours["blue"] << " (" << p.second->call_count << "): " << colours["cyan"] << duration << unit << reset;
 
         // If this child has children, repeat
         if (not child->children.empty()){
-            printLayer_(child, duration);
+            printLayer_(child, ns_dur);
         }
     }
 
+    // If the function body was at least 1ns, report it
     if (prev_duration > 0){
+        std::string unit = " ns\n";
+        if (prev_duration > 1000){
+            unit = " us\n";
+            prev_duration /= 1000;
+        }
+
+        if (prev_duration > 1000){
+            unit = " ms\n";
+            prev_duration /= 1000;
+        }
+
         for(int i = 0; i < layer->layer_index; i++) std::cout << "     ";
-        if (layer->layer_index > 0) std::cout << "|--- ";
-        std::cout << "other: " << colours["cyan"] << prev_duration << " ms\n" << reset;
+        if (layer->layer_index > 0) std::cout << colours["magenta"] << "|--- " << reset;
+        std::cout << "Function Body: " << colours["cyan"] << prev_duration << unit << reset;
     }
 }
 
