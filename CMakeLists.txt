@@ -31,7 +31,7 @@ install(TARGETS cpp_timer
 
 install(EXPORT
         cpp_timerConfig
-    DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/cmake/${PROJECT_NAME}"
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/cmake/${PROJECT_NAME}
     NAMESPACE cpp_timer::
 )
 
