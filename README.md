@@ -46,3 +46,32 @@ planCoveragePath:                  3369 ms   |             1   |       3369 ms
 planDirectPath:                    2159 ms   |           166   |         13 ms
 populatePointCloudObstacles:       1306 ms   |             1   |       1306 ms
 ~~~
+
+# Installing
+The cpp_timer package is a bare cmake package (not catkin) designed to be easy to make and install. It has no external dependencies outside of `boost`, which is likely already installed on your machine. If not, you can find the host page <a href = https://www.boost.org/ >here</a>.
+
+To install the package, first clone or download the repository to your computer. From here on, we will assume that you are cloning using an ssh key as authentification. 
+
+```bash
+$ git clone git@github.com:UTNuclearRobotics/cpp_timer.git
+```
+
+Then navigate into the repo and create a build folder. From this folder we can invoke `cmake` to compile the library.
+
+```bash
+$ cd cpp_timer
+$ mkdir build && cd build
+$ cmake .. & make -j
+```
+
+Now that the library is compiled, you should be able to test it out by running the example executable from within the build folder
+
+```bash
+./example
+```
+
+Now if you wish to install the library so it can easily be used with other `cmake` or `catkin` projects, simply run the command
+
+```bash
+$ sudo make install 
+```
