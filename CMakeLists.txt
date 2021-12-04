@@ -24,19 +24,22 @@ target_compile_options(example PRIVATE -O0) # remove optimizations
 #############
 
 ## Mark libraries for installation
-install(TARGETS cpp_timer  
+install(
+  TARGETS cpp_timer  
   EXPORT cpp_timerConfig
   LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
 )
 
-install(EXPORT
-        cpp_timerConfig
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/cmake/${PROJECT_NAME}
-    NAMESPACE cpp_timer::
+## Install the config file associated with the cpp_timer lib
+install(
+  EXPORT cpp_timerConfig
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/cmake/${PROJECT_NAME}
+  NAMESPACE cpp_timer::
 )
 
 ## Mark header files for installation
-install(FILES include/${PROJECT_NAME}/Timer.h 
+install(
+  FILES include/${PROJECT_NAME}/Timer.h 
   DESTINATION ${CMAKE_INSTALL_PREFIX}/include/${PROJECT_NAME}
 )
 
