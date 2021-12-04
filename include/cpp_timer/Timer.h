@@ -61,6 +61,7 @@ typedef std::map<std::string, std::pair<int, chronoDuration>> timerTotal;
 // TODO: Add call time to either Child or Layer and measure at runtime
 
 struct Layer{
+    std::string name;
     int layer_index;
     int call_count = 1;
     LayerPtr parent;
