@@ -61,7 +61,7 @@ Then navigate into the repo and create a build folder. From this folder we can i
 ```bash
 $ cd cpp_timer
 $ mkdir build && cd build
-$ cmake .. & make -j
+$ cmake .. && make -j
 ```
 
 Now that the library is compiled, you should be able to test it out by running the example executable from within the build folder
