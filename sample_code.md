@@ -9,6 +9,13 @@ Let's go over a simplistic example. The first thing we're going to need is a Tim
 static cpp_timer::Timer timer;
 ```
 
+Additionally, if we want to streamline things later on with this package's macros, we can define a timer instance macro. The name of the timer must match the name of our `static cpp_timer::Timer` from the last step
+
+```cpp
+// Define timer instance macro
+#define TIMER_INSTANCE timer
+```
+
 Now we're going to write a bunch of functions of various efficiencies:
 
 ```cpp
@@ -26,9 +33,11 @@ void efficientFuction(std::vector<double> &vec){
 
 // This function will be called from within another function
 void childFunction1(){
+    TIMER_TIC;
     for (int i = 0; i < 10000; i++){
         int j = i/2.0;
     }
+    TIMER_TOC;
 }
 
 // This function will also be called from within another function
@@ -42,9 +51,7 @@ void childFunction2(){
 // This is where those two functions are called from
 void parentFunction(){
     for (int i = 0; i < 100000; i++){
-        timer.tic("childFunction1");
         childFunction1();
-        timer.toc("childFunction1");
     }
     for (int i = 0; i < 100; i++){
         timer.tic("childFunction2");
@@ -54,7 +61,9 @@ void parentFunction(){
 }
 ```
 
-Note how for every function that we wanted to time, we included a `tic` and a `toc` call. Generally speaking, you want to nest these as closely to the functions as possible. In general, putting it at the start and end of a function is easiest, but one must be careful of functions with multiple `return` statements. It is also acceptable to put it before and after the function call, as this will capture the function call overhead as well. Note that an unmatched tic will cause the function to throw a failed assertion error.
+There are a couple things to note about this code. Note how for every function that we wanted to time, we included a `tic` and a `toc` call. Additionally, we provide the name of the timer label for each function call. If you want to, you can add a separate timer for a section of code, such as an expensive `for` loop with a label of your choosing. Also, note that in `childFunction1` we used the convenience macros `TIMER_TIC` and `TIMER_TOC`. These automatically determine the name of the parent function using the `BOOST_PRETTY_FUNCTION` macro.
+
+ Generally speaking, you want to nest these as closely to the functions as possible. In general, putting it at the start and end of a function is easiest, but one must be careful of functions with multiple `return` statements. It is also acceptable to put it before and after the function call, as this will capture the function call overhead as well. Note that an unmatched tic will cause the function to throw a failed assertion error.
 
 Now finally we write our `main` function
 
