@@ -8,43 +8,66 @@ in each function
 An example of an output from CppTimer is
 
 ~~~
-===== FUNCTION BREAKDOWN =====
-getCellOffsets (2): 3 ms
+============================= FUNCTION BREAKDOWN =============================
 
-planCoveragePath (1): 3369 ms
-     |--- bridge (11328): 1170 ms
-          |--- bridgeFast (6788): 5 ms
-          |--- connectSingleGroup (8206): 730 ms
-          |--- getValidSurroundingCells (9016): 76 ms
-          |--- partition (1956): 157 ms
-          |--- other: 202 ms
-     |--- migrate (2797): 3 ms
-     |--- partition (1): 0 ms
-     |--- planDirectPath (166): 2159 ms
-          |--- bridge (385421): 877 ms
-               |--- bridgeFast (2412): 2 ms
-               |--- connectSingleGroup (2526): 291 ms
-               |--- getValidSurroundingCells (2998): 27 ms
-               |--- partition (1432): 124 ms
-               |--- other: 433 ms
-          |--- migrate (385421): 405 ms
-          |--- other: 877 ms
-     |--- other: 37 ms
+1: efficientFunction (2500): 673 us
+______________________________________________________________________________
 
-populatePointCloudObstacles (1): 1306 ms
+2: fibonacci_outside (1): 5 us
+     |--- fibonacci_deep (1): 2 us
+          |--- fibonacci_deep (2): 2 us
+               |--- fibonacci_deep (4): 1 us
+                    |--- fibonacci_deep (6): 973 ns
+                         |--- fibonacci_deep (2): 203 ns
+                         |--- Function Body: 770 ns
+                    |--- Function Body: 789 ns
+               |--- Function Body: 468 ns
+          |--- Function Body: 251 ns
+     |--- fibonacci_flat (15): 1 us
+     |--- Function Body: 1 us
+______________________________________________________________________________
 
-===== SUMMARY =====
+3: function_call_overhead (100000): 17 ms
+______________________________________________________________________________
+
+4: function_return_overhead (100000): 12 ms
+______________________________________________________________________________
+
+5: reallyLongFunctionNameThatDoesn (1): 241 ns
+______________________________________________________________________________
+
+6: parentFunction (1): 1534 ms
+     |--- childFunction1 (10000): 918 ms
+          |--- loop_1 (10000): 444 ms
+          |--- loop_2 (10000): 471 ms
+          |--- Function Body: 2 ms
+     |--- childFunction2 (100): 615 ms
+          |--- childFunction1 (100): 9 ms
+               |--- loop_1 (100): 4 ms
+               |--- loop_2 (100): 4 ms
+               |--- Function Body: 24 us
+          |--- efficientFunction (100): 15 us
+          |--- expensiveFunction (100): 602 ms
+          |--- Function Body: 4 ms
+     |--- Function Body: 546 us
+______________________________________________________________________________
+
+
+=================================== SUMMARY ===================================
                                 Total Time   |  Times Called   |   Average Time
-bridge:                            2047 ms   |        396749   |          5 us
-bridgeFast:                           7 ms   |          9200   |        855 ns
-connectSingleGroup:                1021 ms   |         10732   |         95 us
-getCellOffsets:                       3 ms   |             2   |          1 ms
-getValidSurroundingCells:           103 ms   |         12014   |          8 us
-migrate:                            409 ms   |        388218   |          1 us
-partition:                          282 ms   |          3389   |         83 us
-planCoveragePath:                  3369 ms   |             1   |       3369 ms
-planDirectPath:                    2159 ms   |           166   |         13 ms
-populatePointCloudObstacles:       1306 ms   |             1   |       1306 ms
+childFunction1:                     927 ms   |         10100   |          91 us
+childFunction2:                     615 ms   |           100   |           6 ms
+efficientFunction:                  689 us   |          2600   |         265 ns
+fibonacci_outside:                    5 us   |             1   |           5 us
+function_call_overhead:              17 ms   |        100000   |         179 ns
+function_return_overhead:            12 ms   |        100000   |         126 ns
+fibonacci_deep:                       2 us   |            15   |         165 ns
+fibonacci_flat:                       1 us   |            15   |          92 ns
+loop_1:                             449 ms   |         10100   |          44 us
+loop_2:                             476 ms   |         10100   |          47 us
+reallyLongFunctionNameThatDoesn:    241 ns   |             1   |         241 ns
+expensiveFunction:                  602 ms   |           100   |           6 ms
+parentFunction:                    1534 ms   |             1   |        1534 ms
 ~~~
 
 # Installing
