@@ -66,8 +66,8 @@ struct Layer{
     int call_count = 1;
     LayerPtr parent;
     layerMap children;
-    chronoDuration duration;
-    chronoDuration child_tic_duration;
+    chronoDuration duration = chronoDuration(0);
+    chronoDuration child_tic_duration = chronoDuration(0);
 };
 
 class Timer{
@@ -92,7 +92,7 @@ public:
      * @brief                   Close timer for function
      * @param function_name     Name with which to store the function time
      *                          Does not have to match the actual function name
-     * @return                  Duration of function call in microseconds
+     * @return                  None
      */
     void toc(std::string function_name);
 
@@ -136,11 +136,6 @@ private:
      * Get the total times tic-toc pairs were called in children to a layer
      */
     chronoDuration getChildTicTocTime_(LayerPtr layer);
-
-    /**
-     * Get pointers to all children in the class
-     */
-    // void getAllChildren_(std::vector<Child*> &output);
 };
 
 }   // namespace cpp_timer
