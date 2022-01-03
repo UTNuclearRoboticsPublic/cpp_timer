@@ -125,7 +125,7 @@ private:
     /**
      * Recursively print a layer and all of it's children
      */
-    void printLayer_(const LayerPtr& layer, int prev_duration = 0);
+    void printLayer_(const LayerPtr& layer, long long prev_duration = 0);
 
     /**
      * Get the total time spent in a layer through recursive calculation

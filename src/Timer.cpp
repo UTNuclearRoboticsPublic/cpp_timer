@@ -251,7 +251,7 @@ void Timer::summary(){
 // ================================================================================
 // ================================================================================
 
-void Timer::printLayer_(const LayerPtr& layer, int prev_duration){
+void Timer::printLayer_(const LayerPtr& layer, long long prev_duration){
     static int base_count = 1;
 
     for (const std::pair<std::string, LayerPtr> &p : layer->children){
