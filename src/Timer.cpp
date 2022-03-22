@@ -28,6 +28,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include <map>
+#include <algorithm>
 #include "cpp_timer/Timer.h"
 
 using std::string;
@@ -75,6 +76,46 @@ namespace{
         // Keep the name inside 32 characters for formatting
         return name_simple.substr(0,31);
     }
+
+    typedef std::pair<string, std::pair<int, cpp_timer::chronoDuration>> totalVal;
+
+    // Total Comparison Functions
+    bool compareTotalByName(totalVal P1, totalVal P2){
+        return P1.first < P2.first;
+    }
+
+    bool compareTotalByAverage(totalVal P1, totalVal P2){
+        return P1.second.second.count()/(float)P1.second.first > P2.second.second.count()/(float)P2.second.first;
+    }
+
+    bool compareTotalByTotal(totalVal P1, totalVal P2){
+        return P1.second.second.count() > P2.second.second.count();
+    }
+
+    bool compareTotalByCallCount(totalVal P1, totalVal P2){
+        return P1.second.first > P2.second.first;
+    }
+
+    // Layer Comparison Functions
+    bool compareLayerByName(const cpp_timer::LayerPtr& L1, const cpp_timer::LayerPtr& L2){
+        return L1->name < L2->name;
+    }
+
+    bool compareLayerByAverage(const cpp_timer::LayerPtr& L1, const cpp_timer::LayerPtr& L2){
+        return L1->duration.count()/(float)L1->call_count > L2->duration.count()/(float)L2->call_count;
+    }
+
+    bool compareLayerByTotal(const cpp_timer::LayerPtr& L1, const cpp_timer::LayerPtr& L2){
+        return L1->duration.count() > L2->duration.count();
+    }
+
+    bool compareLayerByCallCount(const cpp_timer::LayerPtr& L1, const cpp_timer::LayerPtr& L2){
+        return L1->call_count > L2->call_count;
+    }
+
+    bool compareLayerByCallOrder(const cpp_timer::LayerPtr& L1, const cpp_timer::LayerPtr& L2){
+        return L1->call_idx < L2->call_idx;
+    }
 }
 
 namespace cpp_timer{
@@ -112,6 +153,7 @@ void Timer::tic(string function_name){
         // Assign the new layer parameters
         new_layer->layer_index = current_layer_->layer_index + 1;
         new_layer->name = function_name;
+        new_layer->call_idx = current_layer_->child_idx++;
         
         // Update the parent-child relations
         new_layer->parent = current_layer_;
@@ -151,7 +193,7 @@ void Timer::toc(string function_name){
 // ================================================================================
 // ================================================================================
 
-void Timer::summary(){
+void Timer::summary(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdown_order){
     // Ensure that all loose ends have been tied up
     assert(current_layer_->layer_index == 0);
     assert(start_times_.empty());
@@ -170,13 +212,41 @@ void Timer::summary(){
 
     // Show the full function tree
     std::cout << colours["green"] << "\n============================= FUNCTION BREAKDOWN =============================\n" << reset;
-    printLayer_(current_layer_);
+    printLayer_(current_layer_, breakdown_order);
 
-    // Show the total time spent on each function, regardless of parent/child times
+    // Show the total time spent on each function, regardless of parent/child relations
     std::cout << colours["green"]   << "\n\n=================================== SUMMARY ===================================\n";
     std::cout << colours["magenta"] << "\t\t\t\tTotal Time   |  Times Called   |   Average Time\n" << reset;
+    
+    // Sort the totals by the sorting mechanism presented
     timerTotal totals = getTotals_(current_layer_);
-    for (const std::pair<std::string, std::pair<int, chronoDuration>> &p : totals){
+    std::vector<totalVal> sorted_times;
+    for (const auto& entry : totals){
+        sorted_times.push_back(entry);
+    }
+
+    bool (*comp)(totalVal, totalVal);
+    switch(total_order){
+        default:
+        case BY_NAME:
+            comp = &compareTotalByName;
+            break;
+
+        case BY_TOTAL:
+            comp = &compareTotalByTotal;
+            break;
+
+        case BY_AVERAGE:
+            comp = &compareTotalByAverage;
+            break;
+
+        case BY_CALL_COUNT:
+            comp = &compareTotalByCallCount;
+            break;
+    }
+    std::sort(sorted_times.begin(), sorted_times.end(), *comp);
+
+    for (const std::pair<std::string, std::pair<int, chronoDuration>> &p : sorted_times){
         std::string name    = parseFunctionName(p.first);
         long long  duration = p.second.second.count();
         int call_count      = p.second.first;
@@ -251,14 +321,44 @@ void Timer::summary(){
 // ================================================================================
 // ================================================================================
 
-void Timer::printLayer_(const LayerPtr& layer, long long prev_duration){
+void Timer::printLayer_(const LayerPtr& layer, SummaryOrder order, long long prev_duration){
     static int base_count = 1;
 
+    // Sort the individual layers by the specified order
+    std::vector<LayerPtr> sorted_layers;
+    sorted_layers.reserve(layer->children.size());
     for (const std::pair<std::string, LayerPtr> &p : layer->children){
+        sorted_layers.push_back(p.second);
+    }
+
+    bool(*comp)(const LayerPtr&, const LayerPtr&);
+    switch (order){
+        case BY_NAME:
+            comp = &compareLayerByName;
+            break;
+
+        case BY_TOTAL:
+            comp = &compareLayerByTotal;
+            break;
+
+        case BY_AVERAGE:
+            comp = &compareLayerByAverage;
+            break;
+
+        case BY_CALL_COUNT:
+            comp = &compareLayerByCallCount;
+            break;
+
+        default:
+            comp = &compareLayerByCallOrder;
+    }
+    std::sort(sorted_layers.begin(), sorted_layers.end(), comp);
+
+    for (const LayerPtr& L : sorted_layers){
         // Get the child layer info
-        std::string name  = parseFunctionName(p.first);
-        LayerPtr child    = p.second;
-        long int duration = std::chrono::duration_cast<std::chrono::nanoseconds>(p.second->duration).count();
+        std::string name  = parseFunctionName(L->name);
+        LayerPtr child    = L;
+        long int duration = std::chrono::duration_cast<std::chrono::nanoseconds>(L->duration).count();
         long int ns_dur   = duration;
         string unit       = " ns\n";
         prev_duration    -= duration;
@@ -281,11 +381,11 @@ void Timer::printLayer_(const LayerPtr& layer, long long prev_duration){
         else std::cout << "\n";
 
         if (layer->layer_index == 0) cout << colours["green"] << base_count++ << ": " << reset;
-        std::cout << name << colours["blue"] << " (" << p.second->call_count << "): " << colours["cyan"] << duration << unit << reset;
+        std::cout << name << colours["blue"] << " (" << L->call_count << "): " << colours["cyan"] << duration << unit << reset;
 
         // If this child has children, repeat
         if (not child->children.empty()){
-            printLayer_(child, ns_dur);
+            printLayer_(child, order, ns_dur);
         }
 
         if (layer->layer_index == 0)

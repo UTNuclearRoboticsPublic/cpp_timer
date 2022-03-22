@@ -66,6 +66,8 @@ struct Layer{
     std::string name;
     int layer_index;
     int call_count = 1;
+    int call_idx = 0;
+    int child_idx = 0;
     LayerPtr parent;
     layerMap children;
     chronoDuration duration = chronoDuration(0);
@@ -98,6 +100,14 @@ public:
      */
     void toc(std::string function_name);
 
+    enum SummaryOrder{
+        BY_NAME,
+        BY_TOTAL,
+        BY_AVERAGE,
+        BY_CALL_COUNT,
+        BY_CALL_ORDER
+    };
+
     /**
      * Show the summary of the all of the timer calls. All tic() calls must be closed
      * when this function is called. Two versions of the summary will be printed. The 
@@ -105,7 +115,7 @@ public:
      * spent in each function, including time spent in nested functions
      * @brief                   Show the summary of all timer measurements
      */
-    void summary();
+    void summary(SummaryOrder total_order = BY_NAME, SummaryOrder breakdown_order = BY_CALL_ORDER);
 
 private:
 
@@ -127,7 +137,7 @@ private:
     /**
      * Recursively print a layer and all of it's children
      */
-    void printLayer_(const LayerPtr& layer, long long prev_duration = 0);
+    void printLayer_(const LayerPtr& layer, SummaryOrder order, long long prev_duration = 0);
 
     /**
      * Get the total time spent in a layer through recursive calculation

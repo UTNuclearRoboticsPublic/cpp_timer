@@ -128,6 +128,6 @@ int main(){
         timer.toc("function_return_overhead");
     }
 
-    timer.summary();
+    timer.summary(cpp_timer::Timer::SummaryOrder::BY_TOTAL, cpp_timer::Timer::SummaryOrder::BY_CALL_ORDER);
     return 0;
 }
