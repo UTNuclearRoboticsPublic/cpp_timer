@@ -117,6 +117,8 @@ public:
      */
     void summary(SummaryOrder total_order = BY_NAME, SummaryOrder breakdown_order = BY_CALL_ORDER);
 
+    bool allow_interruption = false;
+
 private:
 
     /**
@@ -148,6 +150,21 @@ private:
      * Get the total times tic-toc pairs were called in children to a layer
      */
     chronoDuration getChildTicTocTime_(LayerPtr layer);
+
+    /**
+     * Close up loose ends if the timer ends early
+     */
+    void closeUpLooseEnds_();
+
+    /**
+     * Variable to store the total time taken in each process
+     */
+    timerTotal totals_;
+
+    /**
+     * Variable for the total number of independent processes measured
+     */
+    int base_count_ = 1;
 };
 
 }   // namespace cpp_timer

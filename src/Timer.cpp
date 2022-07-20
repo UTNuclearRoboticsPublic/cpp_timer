@@ -194,6 +194,10 @@ void Timer::toc(string function_name){
 // ================================================================================
 
 void Timer::summary(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdown_order){
+    if (allow_interruption){
+        closeUpLooseEnds_();
+    }
+
     // Ensure that all loose ends have been tied up
     assert(current_layer_->layer_index == 0);
     assert(start_times_.empty());
@@ -322,7 +326,6 @@ void Timer::summary(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdo
 // ================================================================================
 
 void Timer::printLayer_(const LayerPtr& layer, SummaryOrder order, long long prev_duration){
-    static int base_count = 1;
 
     // Sort the individual layers by the specified order
     std::vector<LayerPtr> sorted_layers;
@@ -380,7 +383,7 @@ void Timer::printLayer_(const LayerPtr& layer, SummaryOrder order, long long pre
         if (layer->layer_index > 0) std::cout << colours["magenta"] << "|--- " << reset;
         else std::cout << "\n";
 
-        if (layer->layer_index == 0) cout << colours["green"] << base_count++ << ": " << reset;
+        if (layer->layer_index == 0) cout << colours["green"] << base_count_++ << ": " << reset;
         std::cout << name << colours["blue"] << " (" << L->call_count << "): " << colours["cyan"] << duration << unit << reset;
 
         // If this child has children, repeat
@@ -415,7 +418,7 @@ void Timer::printLayer_(const LayerPtr& layer, SummaryOrder order, long long pre
 // ================================================================================
 
 timerTotal Timer::getTotals_(LayerPtr layer){
-    static timerTotal totals;
+
     for (const std::pair<std::string, LayerPtr> &p : layer->children){
         // Get the child layer info
         std::string name = p.first;
@@ -430,15 +433,15 @@ timerTotal Timer::getTotals_(LayerPtr layer){
         }
 
         // Note that subsequent recursive calls do not increase total time
-        if (totals.count(name)){
-            totals[name].first  += layer->children[name]->call_count;
-            totals[name].second += layer->children[name]->duration * (not is_recursive);
+        if (totals_.count(name)){
+            totals_[name].first  += layer->children[name]->call_count;
+            totals_[name].second += layer->children[name]->duration * (not is_recursive);
 
         // If we do not have this label yet, create a new entry for it
         }else{
-            totals[name] = std::pair<int, chronoDuration>();
-            totals[name].first  = layer->children[name]->call_count;
-            totals[name].second = layer->children[name]->duration;
+            totals_[name] = std::pair<int, chronoDuration>();
+            totals_[name].first  = layer->children[name]->call_count;
+            totals_[name].second = layer->children[name]->duration;
         }
 
         // If this child has children, repeat
@@ -447,7 +450,7 @@ timerTotal Timer::getTotals_(LayerPtr layer){
         }
     }
 
-    return totals;
+    return totals_;
 }
 
 // ================================================================================
@@ -464,6 +467,25 @@ chronoDuration Timer::getChildTicTocTime_(LayerPtr layer){
     }
 
     return child_tic_toc_dur;
+}
+
+// ================================================================================
+// ================================================================================
+
+void Timer::closeUpLooseEnds_(){
+    std::vector<std::string*> interrupted_names;
+    interrupted_names.reserve(current_layer_->layer_index);
+
+    while (current_layer_->layer_index != 0){
+        interrupted_names.push_back(&current_layer_->name);
+        toc(current_layer_->name);
+    }
+
+    cout << colours["yellow"] << endl;
+    for (std::string* name : interrupted_names){
+        printf("Timer interruption on function %s\n", name->c_str());
+    }
+    cout << reset << endl;
 }
 
 } // namespace cpp_timer
