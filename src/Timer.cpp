@@ -363,9 +363,7 @@ void Timer::buildTree_(){
             // Ready a vector which we will put back into the system 
             std::vector<TicLabel> new_tictocs_;
             size_t size = tictocs_.size();
-            cout << "Reserving with size " << size << endl;
             new_tictocs_.reserve(tictocs_.size());
-            cout << "Done" << endl;
 
             // Protect the tictocs_ vectors from race conditions
             std::unique_lock<std::mutex> tree_lock(tree_mtx_);
