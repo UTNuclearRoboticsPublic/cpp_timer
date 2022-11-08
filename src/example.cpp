@@ -128,6 +128,17 @@ int main(){
         timer.toc("function_return_overhead");
     }
 
+    // And here we can see the general overhead of calling tic and toc
+    auto t1 = std::chrono::steady_clock::now();
+    for (int i = 0; i < 1e6; i++){
+        timer.tic("tictoc overhead");
+        timer.tic("dummy");
+        timer.toc("dummy");
+        timer.toc("tictoc overhead");
+    }
+    auto t2 = std::chrono::steady_clock::now();
+    std::cout << "Tictoc overhead should be " << std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count() << std::endl; 
+
     timer.summary(cpp_timer::Timer::SummaryOrder::BY_TOTAL, cpp_timer::Timer::SummaryOrder::BY_CALL_ORDER);
     return 0;
 }
