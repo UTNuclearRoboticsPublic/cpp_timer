@@ -132,7 +132,7 @@ Timer::Timer() {
     all_layers_.reserve(100);
     all_layers_.push_back(current_layer_);
 
-    tictocs_.reserve(10);
+    tictocs_.reserve(500);
 
     tree_thread_ = std::thread(&Timer::buildTree_, this);
     while(concluded_);
@@ -369,7 +369,7 @@ void Timer::buildTree_(){
             std::unique_lock<std::mutex> tree_lock(tree_mtx_);
             
             // Build up the tree if we've collected enough data
-            tree_contition_.wait(tree_lock, [this](){return concluded_ || (tictocs_.size() > 50);});
+            tree_contition_.wait(tree_lock, [this](){return concluded_ || (tictocs_.size() > 500);});
 
             // Do an Indiana Jones artifact swap
             tictoc_copy = std::move(tictocs_);
