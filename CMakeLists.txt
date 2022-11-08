@@ -1,24 +1,25 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(cpp_timer)
 
-## Compile as C++14, supported in ROS Melodic and newer
+## Compile as C++14
 add_compile_options(-std=c++14)
 
-## System dependencies are found with CMake's conventions
+## Boost required for function name macros
 find_package(Boost REQUIRED COMPONENTS system)
 
-## Specify additional locations of header files
+## Specify location of header files
 include_directories(
   include
 )
 
-## Declare a C++ library
+## Declare the C++ library
 add_library(cpp_timer SHARED src/Timer.cpp)
+target_link_libraries(cpp_timer -lpthread)
 
-add_executable(example src/example.cpp src/Timer.cpp)
-target_link_libraries(example -lpthread)
-# target_link_libraries(example cpp_timer -lpthread)
-target_compile_options(example PRIVATE -O0 -g) # remove optimizations
+## Executable for demonstration purposes
+add_executable(example src/example.cpp)
+target_link_libraries(example cpp_timer)
+target_compile_options(example PRIVATE -O0 -g) # remove optimizations and add debug symbols
 
 #############
 ## Install ##
