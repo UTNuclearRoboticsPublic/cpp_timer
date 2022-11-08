@@ -32,13 +32,16 @@
 #define COVERAGE_PLANNER_TIMER_H_
 
 #include <map>
+#include <mutex>
 #include <math.h>
 #include <string>
 #include <vector>
 #include <chrono>
 #include <memory>
+#include <thread>
 #include <assert.h>
 #include <iostream>
+#include <condition_variable>
 #include "boost/current_function.hpp"
 
 // You need to define TIMER_INSTANCE in your own implementation file
@@ -63,7 +66,7 @@ typedef std::map<std::string, std::pair<int, chronoDuration>> timerTotal;
 // TODO: Add call time to either Child or Layer and measure at runtime
 
 struct Layer{
-    std::string name;
+    const char* name;
     int layer_index;
     int call_count = 1;
     int call_idx = 0;
@@ -71,7 +74,17 @@ struct Layer{
     LayerPtr parent;
     layerMap children;
     chronoDuration duration = chronoDuration(0);
-    chronoDuration child_tic_duration = chronoDuration(0);
+};
+
+struct TicLabel{
+    const char* name;
+    chronoTime stamp;
+    enum TickType{
+        TICK,
+        TOCK
+    } type = TICK;
+
+    TicLabel(const char* n, chronoTime s, TickType t) : name(n), stamp(s), type(t) {}
 };
 
 class Timer{
@@ -82,6 +95,11 @@ public:
     Timer();
 
     /**
+     * Close up loose threads on desctruction 
+     */
+    ~Timer();
+
+    /**
      * Start timer for function
      * @brief                   Start timer for function
      * @param function_name     Name with which to store the function time
@@ -89,7 +107,7 @@ public:
      * @return                  None
      * @note                    All tic() calls MUST be paired with a corresponding toc() call
      */
-    void tic(std::string function_name);
+    void tic(const char* function_name);
 
     /**
      * Close timer for function
@@ -98,7 +116,7 @@ public:
      *                          Does not have to match the actual function name
      * @return                  None
      */
-    void toc(std::string function_name);
+    void toc(const char* function_name);
 
     enum SummaryOrder{
         BY_NAME,
@@ -132,6 +150,31 @@ private:
     std::vector<chronoTime> start_times_;
 
     /**
+     * Vectors which hold the start and end times of each function 
+     */
+    std::vector<TicLabel> tictocs_;
+
+    /**
+     * Thread which works on building the tree while allowing the main thread to run uninterrupted 
+     */
+    std::thread tree_thread_;
+
+    /**
+     * Mutex to protect the tic and toc labels while they are being gathered 
+     */
+    std::mutex tree_mtx_;
+
+    /**
+     * Condition variable to tell tree thread when to build up the tree 
+     */
+    std::condition_variable tree_contition_;
+
+    /**
+     * Boolean flag indicating whether the thread should conclude 
+     */
+    bool concluded_ = true;
+
+    /**
      * Vector of all layers in the problem
      */
     std::vector<LayerPtr> all_layers_;
@@ -150,6 +193,18 @@ private:
      * Get the total times tic-toc pairs were called in children to a layer
      */
     chronoDuration getChildTicTocTime_(LayerPtr layer);
+
+    /**
+     * Insert a tic or toc label into the tree 
+     */
+    void treeTic_(TicLabel);
+    void treeToc_(TicLabel);
+
+    /**
+     * Tree thread loop function, which retreives all the current tics and tocs and builds up 
+     * the tree as much as possible 
+     */
+    void buildTree_();
 
     /**
      * Close up loose ends if the timer ends early

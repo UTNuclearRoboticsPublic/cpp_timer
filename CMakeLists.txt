@@ -15,9 +15,10 @@ include_directories(
 ## Declare a C++ library
 add_library(cpp_timer SHARED src/Timer.cpp)
 
-add_executable(example src/example.cpp)
-target_link_libraries(example cpp_timer)
-target_compile_options(example PRIVATE -O0) # remove optimizations
+add_executable(example src/example.cpp src/Timer.cpp)
+target_link_libraries(example -lpthread)
+# target_link_libraries(example cpp_timer -lpthread)
+target_compile_options(example PRIVATE -O0 -g) # remove optimizations
 
 #############
 ## Install ##

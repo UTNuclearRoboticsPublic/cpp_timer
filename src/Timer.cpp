@@ -123,7 +123,7 @@ namespace cpp_timer{
 // ================================================================================
 // ================================================================================
 
-Timer::Timer(){
+Timer::Timer() {
     start_times_.reserve(10);
     current_layer_ = LayerPtr(new Layer);
     current_layer_->layer_index = 0;
@@ -131,69 +131,54 @@ Timer::Timer(){
 
     all_layers_.reserve(100);
     all_layers_.push_back(current_layer_);
+
+    tictocs_.reserve(10);
+
+    tree_thread_ = std::thread(&Timer::buildTree_, this);
+    while(concluded_);
 }
 
 // ================================================================================
 // ================================================================================
 
-void Timer::tic(string function_name){
-    chronoTime tic_start = std::chrono::steady_clock::now();
-
-    // If there is already a layer for the function in this framework, move to it
-    if (current_layer_->children.count(function_name)){
-        current_layer_->children[function_name]->call_count++;
-        current_layer_ = current_layer_->children[function_name];
-    }
-    
-    // Otherwise, create a new layer with the current layer as the parent
-    else{
-        LayerPtr new_layer(new Layer);
-        all_layers_.push_back(new_layer);
-
-        // Assign the new layer parameters
-        new_layer->layer_index = current_layer_->layer_index + 1;
-        new_layer->name = function_name;
-        new_layer->call_idx = current_layer_->child_idx++;
-        
-        // Update the parent-child relations
-        new_layer->parent = current_layer_;
-        current_layer_->children[function_name] = new_layer;
-
-        // Set the current layer to be this new layer
-        current_layer_ = new_layer;
-    }
-
-    // Record the duration of the tic and the start time of the function
-    chronoTime tic_end = std::chrono::steady_clock::now();
-    current_layer_->parent->child_tic_duration += (tic_end - tic_start);
-    start_times_.push_back(tic_end);
+Timer::~Timer(){
+    concluded_ = true;
+    tree_contition_.notify_one();
+    tree_thread_.join();
 }
 
 // ================================================================================
 // ================================================================================
 
-void Timer::toc(string function_name){        
-    // Find the duration since the last tic
-    chronoTime toc_start_time = std::chrono::steady_clock::now();
-    chronoDuration duration = toc_start_time - start_times_.back();
+void Timer::tic(const char* function_name){
+    std::unique_lock<std::mutex> tree_lock(tree_mtx_);
+    tictocs_.emplace_back(function_name, std::chrono::steady_clock::now(), TicLabel::TICK);
+}
 
-    // Move up a layer if possible
-    if (current_layer_->layer_index != 0){
-        current_layer_->parent->children[function_name]->duration += duration;
-        current_layer_ = current_layer_->parent;
-    }
+// ================================================================================
+// ================================================================================
 
-    // Now that we've used the most recent start time, we can get rid of it
-    start_times_.pop_back();
-
-    // Record the time spent in the toc function
-    current_layer_->child_tic_duration += (std::chrono::steady_clock::now() - toc_start_time);
+void Timer::toc(const char* function_name){ 
+    {
+        std::unique_lock<std::mutex> tree_lock(tree_mtx_); 
+        tictocs_.emplace_back(function_name, std::chrono::steady_clock::now(), TicLabel::TOCK);  
+    }    
+    tree_contition_.notify_one();
 }
 
 // ================================================================================
 // ================================================================================
 
 void Timer::summary(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdown_order){
+    // Notify the worker thread to finish with its job
+    {
+        std::lock_guard<std::mutex> tree_lock(tree_mtx_);
+        concluded_ = true;
+    }
+    tree_contition_.notify_one();
+    tree_thread_.join();
+    assert(tictocs_.empty());
+
     if (allow_interruption){
         closeUpLooseEnds_();
     }
@@ -203,16 +188,6 @@ void Timer::summary(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdo
     assert(start_times_.empty());
 
     LayerPtr* current_layer_ptr_ptr = &current_layer_;
-
-    // For each layer, subtract the tic-toc times of child layers
-    for (LayerPtr &p : all_layers_){
-        p->duration -= getChildTicTocTime_(p);
-    }
-
-    // Now reset this child time so that subsequent calls to summary() don't repeat the action
-    for (LayerPtr &p : all_layers_){
-        p->child_tic_duration = p->child_tic_duration.zero();
-    }
 
     // Show the full function tree
     std::cout << colours["green"] << "\n============================= FUNCTION BREAKDOWN =============================\n" << reset;
@@ -320,6 +295,102 @@ void Timer::summary(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdo
         std::cout << avg_colour << avg_time << avg_unit << reset << std::endl; 
     }
     std::cout << reset << " " << std::endl;
+
+    // Restart the tree thread
+    tree_thread_ = std::thread(&Timer::buildTree_, this);
+    while(concluded_);
+}
+
+// ================================================================================
+// ================================================================================
+
+void Timer::treeTic_(TicLabel label){
+    // If there is already a layer for the function in this framework, move to it
+    if (current_layer_->children.count(label.name)){
+        current_layer_->children[label.name]->call_count++;
+        current_layer_ = current_layer_->children[label.name];
+    }
+    
+    // Otherwise, create a new layer with the current layer as the parent
+    else{
+        LayerPtr new_layer(new Layer);
+        all_layers_.push_back(new_layer);
+
+        // Assign the new layer parameters
+        new_layer->layer_index = current_layer_->layer_index + 1;
+        new_layer->name = label.name;
+        new_layer->call_idx = current_layer_->child_idx++;
+        
+        // Update the parent-child relations
+        new_layer->parent = current_layer_;
+        current_layer_->children[label.name] = new_layer;
+
+        // Set the current layer to be this new layer
+        current_layer_ = new_layer;
+    }
+
+    // Record the duration of the tic and the start time of the function
+    start_times_.push_back(label.stamp);
+}
+
+// ================================================================================
+// ================================================================================
+
+void Timer::treeToc_(TicLabel label){
+    // Find the duration since the last tic
+    chronoDuration duration = label.stamp - start_times_.back();
+
+    // Move up a layer if possible
+    if (current_layer_->layer_index != 0){
+        current_layer_->parent->children[label.name]->duration += duration;
+        current_layer_ = current_layer_->parent;
+    }
+
+    // Now that we've used the most recent start time, we can get rid of it
+    start_times_.pop_back();
+}
+
+// ================================================================================
+// ================================================================================
+
+void Timer::buildTree_(){
+    concluded_ = false;
+    while (not (concluded_ && tictocs_.empty())){
+        // Create vectors to hold the tic and toc vectors
+        std::vector<TicLabel> tictoc_copy;
+
+        {
+            // Ready a vector which we will put back into the system 
+            std::vector<TicLabel> new_tictocs_;
+            size_t size = tictocs_.size();
+            cout << "Reserving with size " << size << endl;
+            new_tictocs_.reserve(tictocs_.size());
+            cout << "Done" << endl;
+
+            // Protect the tictocs_ vectors from race conditions
+            std::unique_lock<std::mutex> tree_lock(tree_mtx_);
+            
+            // Build up the tree if we've collected enough data
+            tree_contition_.wait(tree_lock, [this](){return concluded_ || (tictocs_.size() > 50);});
+
+            // Do an Indiana Jones artifact swap
+            tictoc_copy = std::move(tictocs_);
+            tictocs_    = std::move(new_tictocs_);
+        }
+
+        // Add all the current timestamps to the tree
+        for (const TicLabel& label : tictoc_copy){
+            switch (label.type){
+                case TicLabel::TICK:
+                    treeTic_(label);
+                    break;
+
+                case TicLabel::TOCK:
+                    treeToc_(label);
+                    break;
+            }
+        }
+    };
 }
 
 // ================================================================================
@@ -456,34 +527,18 @@ timerTotal Timer::getTotals_(LayerPtr layer){
 // ================================================================================
 // ================================================================================
 
-chronoDuration Timer::getChildTicTocTime_(LayerPtr layer){
-    // Get the time spent in tic-tocs for direct descendants
-    chronoDuration child_tic_toc_dur = layer->child_tic_duration;
-
-    // Get the time spent in tic-tocs for subsequenct descendents
-    for (const std::pair<std::string, LayerPtr> &p : layer->children){
-        LayerPtr child = p.second;
-        child_tic_toc_dur += getChildTicTocTime_(child);
-    }
-
-    return child_tic_toc_dur;
-}
-
-// ================================================================================
-// ================================================================================
-
 void Timer::closeUpLooseEnds_(){
-    std::vector<std::string*> interrupted_names;
+    std::vector<const char*> interrupted_names;
     interrupted_names.reserve(current_layer_->layer_index);
 
     while (current_layer_->layer_index != 0){
-        interrupted_names.push_back(&current_layer_->name);
+        interrupted_names.push_back(current_layer_->name);
         toc(current_layer_->name);
     }
 
     cout << colours["yellow"] << endl;
-    for (std::string* name : interrupted_names){
-        printf("Timer interruption on function %s\n", name->c_str());
+    for (const char* name : interrupted_names){
+        printf("Timer interruption on function %s\n", name);
     }
     cout << reset << endl;
 }
