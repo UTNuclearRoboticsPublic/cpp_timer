@@ -170,6 +170,13 @@ void Timer::toc(const char* function_name){
 // ================================================================================
 // ================================================================================
 
+Ticker Timer::scopedTic(const char* function_name){
+    return Ticker(function_name, this);
+}
+
+// ================================================================================
+// ================================================================================
+
 void Timer::summary(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdown_order){
     // Notify the worker thread to finish with its job
     {

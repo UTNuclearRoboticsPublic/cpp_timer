@@ -78,14 +78,11 @@ void parentFunction(){
 
 // Recursive functions depend on where you put the toc call
 int fibonacci_deep(int n){
-    TIMER_TIC;
+    STIC;
 
     if (n > 1){
-        int return_val = fibonacci_deep(n-1) + fibonacci_deep(n-2);
-        TIMER_TOC;
-        return return_val;
+        return fibonacci_deep(n-1) + fibonacci_deep(n-2);;
     }else{
-        TIMER_TOC;
         return 1;
     }
 }
@@ -116,10 +113,12 @@ int main(){
     timer.toc("reallyLongFunctionNameThatDoesntQuiteFit");
 
     // Calling timer outside recursive functions only counts as one call
-    timer.tic("fibonacci_outside");
+    timer.tic("fibonacci_flat_outside");
     fibonacci_flat(5);
+    timer.toc("fibonacci_flat_outside");
+    timer.tic("fibonacci_deep_outside");
     fibonacci_deep(5);
-    timer.toc("fibonacci_outside");
+    timer.toc("fibonacci_deep_outside");
 
     // Here's a more advanced useage used to measure function call overhead
     for (int i = 0; i < 100000; i++){
@@ -129,15 +128,14 @@ int main(){
     }
 
     // And here we can see the general overhead of calling tic and toc
-    auto t1 = std::chrono::steady_clock::now();
     for (int i = 0; i < 1e6; i++){
         timer.tic("tictoc overhead");
-        timer.tic("dummy");
-        timer.toc("dummy");
+        timer.tic("manual_overhead");
+        timer.toc("manual_overhead");
         timer.toc("tictoc overhead");
+
+        auto _ = timer.scopedTic("scope_overhead");
     }
-    auto t2 = std::chrono::steady_clock::now();
-    std::cout << "Tictoc overhead should be " << std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count() << std::endl; 
 
     timer.summary(cpp_timer::Timer::SummaryOrder::BY_TOTAL, cpp_timer::Timer::SummaryOrder::BY_CALL_ORDER);
     return 0;

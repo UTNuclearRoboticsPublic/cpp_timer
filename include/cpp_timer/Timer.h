@@ -42,6 +42,7 @@
 #include <assert.h>
 #include <iostream>
 #include <condition_variable>
+#include "boost/preprocessor/cat.hpp"
 #include "boost/current_function.hpp"
 
 // You need to define TIMER_INSTANCE in your own implementation file
@@ -49,11 +50,14 @@
 #define TIMER_TOC TIMER_INSTANCE.toc(BOOST_CURRENT_FUNCTION)
 #define TIMER_PTIC TIMER_INSTANCE->tic(BOOST_CURRENT_FUNCTION)
 #define TIMER_PTOC TIMER_INSTANCE->toc(BOOST_CURRENT_FUNCTION)
+#define STIC const auto&& BOOST_PP_CAT(_ticker_, __LINE__) = TIMER_INSTANCE.scopedTic(BOOST_CURRENT_FUNCTION)
+#define SPTIC const auto&&BOOST_PP_CAT(_ticker_, __LINE__) = TIMER_INSTANCE->scopedTic(BOOST_CURRENT_FUNCTION)
 
 namespace cpp_timer{
 
 // Forward declaration
 struct Layer;
+class Ticker;
 
 // Typedefs for readability
 typedef std::shared_ptr<cpp_timer::Layer> LayerPtr;
@@ -117,6 +121,13 @@ public:
      * @return                  None
      */
     void toc(const char* function_name);
+
+    /**
+     * Start a scope based timer for a scope 
+     * @param name              The name of the scope or function to measure
+     * @return                  A ticker scope object that automatically measures its own lifetime
+     */
+    Ticker scopedTic(const char* name);
 
     enum SummaryOrder{
         BY_NAME,
@@ -182,7 +193,7 @@ private:
     /**
      * Recursively print a layer and all of it's children
      */
-    void printLayer_(const LayerPtr& layer, SummaryOrder order, long long prev_duration = 0);
+    void printLayer_(const LayerPtr& layer, SummaryOrder order, long int prev_duration = 0);
 
     /**
      * Get the total time spent in a layer through recursive calculation
@@ -212,6 +223,12 @@ private:
     void closeUpLooseEnds_();
 
     /**
+     * Report a duration in the most intuitive units (largest being milliseconds)
+     * @return          The string of the unit for this duration 
+     */
+    std::string normalizeDuration_(long int& dur_ns) const;
+
+    /**
      * Variable to store the total time taken in each process
      */
     timerTotal totals_;
@@ -220,6 +237,22 @@ private:
      * Variable for the total number of independent processes measured
      */
     int base_count_ = 1;
+};
+
+// For scope based measuring
+class Ticker{
+public:
+    Ticker(const char* name, Timer* timer) : name_(name), timer_(timer) {
+        timer_->tic(name_);
+    }
+
+    ~Ticker(){
+        timer_->toc(name_);
+    }
+
+private:
+    Timer* timer_;
+    const char* name_;
 };
 
 }   // namespace cpp_timer
