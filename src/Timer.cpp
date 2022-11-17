@@ -416,11 +416,11 @@ void Timer::printLayer_(const LayerPtr& layer, SummaryOrder order, long int prev
             std::cout << '\n';
             left_side << colours["green"] << base_count_++ << ": " << reset;
         }
-        left_side << name << colours["blue"] << " (" << L->call_count << "): " << colours["cyan"] << avg_dur << avg_unit;
+        left_side << name << colours["blue"] << " (" << L->call_count << "): " << colours["cyan"] << duration << unit;
         std::cout << std::setw(93) << std::left << left_side.str() << " " << colours["magenta"];  
 
         // Right side contains total runtime of each layer
-        right_side << "(" << duration << unit << ")";
+        right_side << "(" << avg_dur << avg_unit << ")";
         std::cout << std::setw(10) << std::right << right_side.str() << reset << '\n';
 
         // Recursively print the next layer
