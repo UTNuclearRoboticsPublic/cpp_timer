@@ -297,7 +297,7 @@ void Timer::treeToc_(TicLabel label){
 
     // Move up a layer if possible
     if (current_layer_->layer_index != 0){
-        current_layer_->parent->children[label.name]->duration += duration;
+        current_layer_->parent->children.at(label.name)->duration += duration;
         current_layer_ = current_layer_->parent;
     }
 

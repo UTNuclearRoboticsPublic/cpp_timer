@@ -15,6 +15,7 @@ include_directories(
 ## Declare the C++ library
 add_library(cpp_timer SHARED src/Timer.cpp)
 target_link_libraries(cpp_timer -lpthread)
+target_compile_options(cpp_timer PRIVATE -g)
 
 ## Executable for demonstration purposes
 add_executable(example src/example.cpp)
