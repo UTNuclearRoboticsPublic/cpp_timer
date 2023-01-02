@@ -146,8 +146,6 @@ public:
      */
     void summary(SummaryOrder total_order = BY_NAME, SummaryOrder breakdown_order = BY_CALL_ORDER);
 
-    bool allow_interruption = false;
-
 private:
 
     /**
@@ -216,11 +214,6 @@ private:
      * the tree as much as possible 
      */
     void buildTree_();
-
-    /**
-     * Close up loose ends if the timer ends early
-     */
-    void closeUpLooseEnds_();
 
     /**
      * Report a duration in the most intuitive units (largest being milliseconds)

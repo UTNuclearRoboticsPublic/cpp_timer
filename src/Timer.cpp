@@ -187,13 +187,10 @@ void Timer::summary(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdo
     tree_thread_.join();
     assert(tictocs_.empty());
 
-    if (allow_interruption){
-        closeUpLooseEnds_();
+    // Reset our state to the base layer
+    while(current_layer_->layer_index != 0){
+        current_layer_ = current_layer_->parent;
     }
-
-    // Ensure that all loose ends have been tied up
-    assert(current_layer_->layer_index == 0);
-    assert(start_times_.empty());
 
     LayerPtr* current_layer_ptr_ptr = &current_layer_;
 
@@ -439,8 +436,8 @@ void Timer::printLayer_(const LayerPtr& layer, SummaryOrder order, long int prev
 
         std::ostringstream left_side, right_side;
         left_side << colours["magenta"] << std::setw(5*(layer->layer_index + 1)) << "|--- " << reset;
-        left_side << "Function Body: " << colours["cyan"] << prev_avg_dur << function_unit;
-        right_side << "(" << prev_duration << unit << ")";
+        left_side << "Function Body: " << colours["cyan"] << prev_duration << function_unit;
+        right_side << "(" << prev_avg_dur << unit << ")";
 
         std::cout << std::setw(87) << std::left << left_side.str();
         std::cout << colours["magenta"] << std::setw(10) << std::right << right_side.str() << reset << '\n';
@@ -484,25 +481,6 @@ timerTotal Timer::getTotals_(LayerPtr layer){
     }
 
     return totals_;
-}
-
-// ================================================================================
-// ================================================================================
-
-void Timer::closeUpLooseEnds_(){
-    std::vector<const char*> interrupted_names;
-    interrupted_names.reserve(current_layer_->layer_index);
-
-    while (current_layer_->layer_index != 0){
-        interrupted_names.push_back(current_layer_->name);
-        toc(current_layer_->name);
-    }
-
-    cout << colours["yellow"] << endl;
-    for (const char* name : interrupted_names){
-        printf("Timer interruption on function %s\n", name);
-    }
-    cout << reset << endl;
 }
 
 } // namespace cpp_timer
