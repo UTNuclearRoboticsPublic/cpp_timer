@@ -139,6 +139,38 @@ There are several macros defined in `cpp_timer/Timer.h` which allow for less wor
 
 The header also defines `TIMER_PTIC`, `TIMER_PTOC`, and `SPTIC` for cases where `TIMER_INSTANCE` is a pointer type.
 
+```c++
+#include "cpp_timer/Timer.h"
+#include "my_other_code.h"
+
+static cpp_timer::Timer timer;
+#define TIMER_INSTANCE timer
+
+int func(){
+     // Create a scoped Ticker object
+     STIC;
+
+     // Do some stuff
+     return 0;
+}
+
+int main(){
+     // Automatically call timer.tic("main")
+     TIMER_TIC;
+
+     // Do some stuff
+     setup();
+     func();
+     cleanup()
+
+     // Automatically call timer.toc("main")
+     TIMER_TOC;
+
+     return 0;
+}
+
+```
+
 Finally, when all benchmarking is done, you can print the summary out to the terminal with the `summary()` function. This summary contains two sections. The first is a detailed breakdown of each function called according to its nested caller-callee relationship to other functions. Identical function calls from different parts of the code will appear separately in this section. The second section is a conglomerate summary of all functions called during the process runtime. Caller-callee relationships are ignored, and so identical function calls are merged together to give an overview of the independent function runtime perforances.
 
 The summary function accepts two arguments. The first is the order in which to print the conglomerate summary. The second is the order in which to print the child function calls of each function being timed. These arguments are both of the type `cpp_timer::Timer::SummaryOrder` and are defined equivalent to
