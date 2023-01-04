@@ -39,57 +39,24 @@
 #include <chrono>
 #include <memory>
 #include <thread>
-#include <assert.h>
-#include <iostream>
 #include <condition_variable>
 #include "boost/preprocessor/cat.hpp"
 #include "boost/current_function.hpp"
+
+#include "cpp_timer/Layer.h"
+#include "cpp_timer/Ticker.h"
+#include "cpp_timer/TickLabel.h"
+#include "cpp_timer/TimerTotal.h"
 
 // You need to define TIMER_INSTANCE in your own implementation file
 #define TIMER_TIC TIMER_INSTANCE.tic(BOOST_CURRENT_FUNCTION)
 #define TIMER_TOC TIMER_INSTANCE.toc(BOOST_CURRENT_FUNCTION)
 #define TIMER_PTIC TIMER_INSTANCE->tic(BOOST_CURRENT_FUNCTION)
 #define TIMER_PTOC TIMER_INSTANCE->toc(BOOST_CURRENT_FUNCTION)
-#define STIC const auto&& BOOST_PP_CAT(_ticker_, __LINE__) = TIMER_INSTANCE.scopedTic(BOOST_CURRENT_FUNCTION)
-#define SPTIC const auto&&BOOST_PP_CAT(_ticker_, __LINE__) = TIMER_INSTANCE->scopedTic(BOOST_CURRENT_FUNCTION)
+#define STIC  const auto&& BOOST_PP_CAT(_ticker_, __LINE__) = TIMER_INSTANCE.scopedTic(BOOST_CURRENT_FUNCTION)
+#define SPTIC const auto&& BOOST_PP_CAT(_ticker_, __LINE__) = TIMER_INSTANCE->scopedTic(BOOST_CURRENT_FUNCTION)
 
 namespace cpp_timer{
-
-// Forward declaration
-struct Layer;
-class Ticker;
-
-// Typedefs for readability
-typedef std::shared_ptr<cpp_timer::Layer> LayerPtr;
-typedef std::chrono::steady_clock::time_point chronoTime;
-typedef std::chrono::duration<long int, std::nano> chronoDuration;
-typedef std::map<std::string, chronoDuration> durationMap;
-typedef std::map<std::string, LayerPtr> layerMap;
-typedef std::map<std::string, std::pair<int, chronoDuration>> timerTotal;
-
-// TODO: Add call time to either Child or Layer and measure at runtime
-
-struct Layer{
-    const char* name;
-    int layer_index;
-    int call_count = 1;
-    int call_idx = 0;
-    int child_idx = 0;
-    LayerPtr parent;
-    layerMap children;
-    chronoDuration duration = chronoDuration(0);
-};
-
-struct TicLabel{
-    const char* name;
-    chronoTime stamp;
-    enum TickType{
-        TICK,
-        TOCK
-    } type = TICK;
-
-    TicLabel(const char* n, chronoTime s, TickType t) : name(n), stamp(s), type(t) {}
-};
 
 class Timer{
 public:
@@ -196,7 +163,8 @@ private:
     /**
      * Get the total time spent in a layer through recursive calculation
      */
-    timerTotal getTotals_(LayerPtr layer);
+    // timerTotal getTotals_(LayerPtr layer);
+    void getTotals_(LayerPtr layer);
 
     /**
      * Get the total times tic-toc pairs were called in children to a layer
@@ -224,28 +192,12 @@ private:
     /**
      * Variable to store the total time taken in each process
      */
-    timerTotal totals_;
+    std::map<std::string, TimerTotal> totals_;
 
     /**
      * Variable for the total number of independent processes measured
      */
     int base_count_ = 1;
-};
-
-// For scope based measuring
-class Ticker{
-public:
-    Ticker(const char* name, Timer* timer) : name_(name), timer_(timer) {
-        timer_->tic(name_);
-    }
-
-    ~Ticker(){
-        timer_->toc(name_);
-    }
-
-private:
-    Timer* timer_;
-    const char* name_;
 };
 
 }   // namespace cpp_timer
