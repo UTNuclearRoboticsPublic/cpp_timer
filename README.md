@@ -1,9 +1,5 @@
 # C++ Timer Class
-This repo contains a class useful for general C++ time benchmarking
-Note that this is not a high resolution timer; the class does not account
-for it's own runtime (open a pull request with that feature if you'd 
-like to add it), but it gives a good overview of the relative times spent
-in each function
+This repo contains a class useful for general C++ time benchmarking. All efforts have been made to reduce the effect of the timer class itself on the runtime performance of the code. All timer logic and processing is handled on a concurrent thread. Note that `CppTimer` is NOT thread safe, and should only be used from a single thread.
 
 An example of an output from CppTimer is
 
@@ -70,7 +66,7 @@ expensiveFunction:                  602 ms   |           100   |           6 ms
 parentFunction:                    1534 ms   |             1   |        1534 ms
 ~~~
 
-# Installing
+# Installation
 The cpp_timer package is a bare cmake package (not catkin) designed to be easy to make and install. It has no external dependencies outside of `boost`, which is likely already installed on your machine. If not, you can find the host page <a href = https://www.boost.org/ >here</a>.
 
 To install the package, first clone or download the repository to your computer. From here on, we will assume that you are cloning using an ssh key as authentification. 
@@ -97,4 +93,66 @@ Now if you wish to install the library so it can easily be used with other `cmak
 
 ```bash
 $ sudo make install 
+```
+
+# Usage
+`CppTimer` takes inspiration from the MATLAB builtin functions tic and toc, which can be used to determine the duration of pieces of code. To begin using CppTimer (assuming you have already linked it to your CMake package using `find_package(cpp_timer)`), simply include the `cpp_timer/Timer.h` header and create an instance of the class. Once that is done, call the `tic` and `toc` methods with a section name to automatically get the duration between the function calls.
+
+```c++
+#include "cpp_timer/Timer.h"
+
+int main(){
+     cpp_timer::Timer timer;
+
+     timer.tic("Example");
+     // Put code to benchmark here
+     timer.toc("Example");
+
+     timer.summary();
+}
+```
+
+In some cases, a function may have many return statements, and it can be troublesome to remember to put a corresponding `toc` before each return. To tackle this issue, `CppTimer` offers a scope based ticker, which automatically calls `tic` on construction and automatically calls `toc` on destruction.
+
+```c++
+int doSomething(int val){
+     cpp_timer::Ticker t = timer.scopedTic("doSomething");
+
+     if (val == 0) return -1;
+
+     int error_val = runExpensiveFunction();
+
+     if (error_val == 1)
+          return -1;
+     else if (error_val == 2)
+          return 0;
+     else
+          return 1;
+}
+```
+
+There are several macros defined in `cpp_timer/Timer.h` which allow for less wordy timer initializations. For all of these cases, you must first define a macro `TIMER_INSTANCE` to indicate which timer is responsible for the function calls. These macros include
+
+* `TIMER_TIC` - Runs `tic` where the name of the calling function is automatically detected
+* `TIMER_TOC` - Runs `toc` where the name of the calling function is automatically detected
+* `STIC` - Stands for Scoped Tic. Creates and automatically names a `Ticker` object in the current scope
+
+The header also defines `TIMER_PTIC`, `TIMER_PTOC`, and `SPTIC` for cases where `TIMER_INSTANCE` is a pointer type.
+
+Finally, when all benchmarking is done, you can print the summary out to the terminal with the `summary()` function. This summary contains two sections. The first is a detailed breakdown of each function called according to its nested caller-callee relationship to other functions. Identical function calls from different parts of the code will appear separately in this section. The second section is a conglomerate summary of all functions called during the process runtime. Caller-callee relationships are ignored, and so identical function calls are merged together to give an overview of the independent function runtime perforances.
+
+The summary function accepts two arguments. The first is the order in which to print the conglomerate summary. The second is the order in which to print the child function calls of each function being timed. These arguments are both of the type `cpp_timer::Timer::SummaryOrder` and are defined equivalent to
+
+```c++
+namespace cpp_timer::Timer{
+
+     enum SummaryOrder{
+          BY_NAME,
+          BY_TOTAL,
+          BY_AVERAGE,
+          BY_CALL_COUNT,
+          BY_CALL_ORDER
+     };
+
+}
 ```
