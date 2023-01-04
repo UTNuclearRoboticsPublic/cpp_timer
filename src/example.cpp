@@ -66,11 +66,12 @@ void parentFunction(){
         timer.toc("childFunction1");
     }
 
+    // This only counts as a single function call
+    timer.tic("childFunction2");
     for (int i = 0; i < 100; i++){
-        timer.tic("childFunction2");
         childFunction2();
-        timer.toc("childFunction2");
     }
+    timer.toc("childFunction2");
 
     // Macro toc
     TIMER_TOC;
@@ -137,6 +138,7 @@ int main(){
         auto _ = timer.scopedTic("scope_overhead");
     }
 
+    // Print the overall summary in decreaseing runtime order, and the function breakdown in the order the functions were called
     timer.summary(cpp_timer::Timer::SummaryOrder::BY_TOTAL, cpp_timer::Timer::SummaryOrder::BY_CALL_ORDER);
     return 0;
 }
