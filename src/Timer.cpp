@@ -5,25 +5,26 @@
 //      Created   : 05/25/2021
 //      Copyright : Copyright© The University of Texas at Austin, 2014-2021. All rights reserved.
 //                
-//          All files within this directory are subject to the following, unless an alternative
-//          license is explicitly included within the text of each file.
+//      Redistribution and use in source and binary forms, with or without modification,
+//      are permitted provided that the following conditions are met:
 //
-//          This software and documentation constitute an unpublished work
-//          and contain valuable trade secrets and proprietary information
-//          belonging to the University. None of the foregoing material may be
-//          copied or duplicated or disclosed without the express, written
-//          permission of the University. THE UNIVERSITY EXPRESSLY DISCLAIMS ANY
-//          AND ALL WARRANTIES CONCERNING THIS SOFTWARE AND DOCUMENTATION,
-//          INCLUDING ANY WARRANTIES OF MERCHANTABILITY AND/OR FITNESS FOR A
-//          PARTICULAR PURPOSE, AND WARRANTIES OF PERFORMANCE, AND ANY WARRANTY
-//          THAT MIGHT OTHERWISE ARISE FROM COURSE OF DEALING OR USAGE OF TRADE.
-//          NO WARRANTY IS EITHER EXPRESS OR IMPLIED WITH RESPECT TO THE USE OF
-//          THE SOFTWARE OR DOCUMENTATION. Under no circumstances shall the
-//          University be liable for incidental, special, indirect, direct or
-//          consequential damages or loss of profits, interruption of business,
-//          or related expenses which may arise from use of software or documentation,
-//          including but not limited to those resulting from defects in software
-//          and/or documentation, or loss or inaccuracy of data of any kind.
+//      Redistributions of source code must retain the above copyright notice, this
+//      list of conditions and the following disclaimer.
+//      
+//      Redistributions in binary form must reproduce the above copyright notice, this
+//      list of conditions and the following disclaimer in the documentation and/or
+//      other materials provided with the distribution.
+//
+//      THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+//      ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+//      WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+//      DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+//      ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+//      (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+//      LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+//      ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+//      (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+//      SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 ///////////////////////////////////////////////////////////////////////////////
 
