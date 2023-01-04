@@ -28,8 +28,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 
-#ifndef COVERAGE_PLANNER_TIMER_H_
-#define COVERAGE_PLANNER_TIMER_H_
+#ifndef TIMER_H_
+#define TIMER_H_
 
 #include <map>
 #include <mutex>
