@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(cpp_timer)
 
-## Compile as C++14
-add_compile_options(-std=c++14)
+## Compile as C++17
+add_compile_options(-std=c++17)
 
 ## Boost required for function name macros
 find_package(Boost REQUIRED COMPONENTS system)
@@ -13,7 +13,7 @@ include_directories(
 )
 
 ## Declare the C++ library
-add_library(cpp_timer SHARED src/Timer.cpp)
+add_library(cpp_timer SHARED src/Timer.cpp src/Ticker.cpp)
 target_link_libraries(cpp_timer -lpthread)
 target_compile_options(cpp_timer PRIVATE -g)
 
