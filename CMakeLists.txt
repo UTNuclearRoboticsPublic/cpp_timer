@@ -42,7 +42,9 @@ install(
 
 ## Mark header files for installation
 install(
-  FILES include/${PROJECT_NAME}/Timer.h 
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/include/${PROJECT_NAME}
+  DIRECTORY include/${PROJECT_NAME}
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/include
+  FILES_MATCHING
+  PATTERN "*.h" 
 )
 
