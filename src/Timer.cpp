@@ -44,53 +44,16 @@ using std::endl;
 
 #define TICTOC_BUFFER_SIZE 500
 
-namespace{ 
-
-    constexpr struct {
-        const char* red     = "\e[1;31m";
-        const char* green   = "\e[1;32m";
-        const char* yellow  = "\e[1;33m";
-        const char* blue    = "\e[1;34m";
-        const char* magenta = "\e[1;35m";
-        const char* cyan    = "\e[1;36m";
-        const char* white   = "\e[1;37m";
-        const char* reset   = "\e[0m";
-    } colours;
-
-    std::string parseFunctionName(std::string name){
-        // Generally a function name has the form 
-        // type namespace1::namespace2::...::namespacen::functionName (args)
-        //     ^                                        ^             ^
-        // The caret symbols above show where the characters of interest are
-
-        // Find the first instance of a space
-        size_t space  = name.find(" ");
-
-        // If no space was found, return the entire string truncated to fit
-        if (space == std::string::npos){
-            return name.substr(0, 30);
-        }
-
-        // Find the fist instance of a "("
-        size_t bracket = name.find("(", space+1);
-        if (bracket == std::string::npos){
-            return name;
-        }
-
-        // Find the last '::' before this "("
-        size_t last_pos = name.find_last_of(":", bracket);
-        if (last_pos == std::string::npos){
-            last_pos = space;
-        }
-
-        // Return just the simplified version of the function name
-        std::string name_simple = name.substr(last_pos + 1, bracket - last_pos - 1);
-
-        // Keep the name inside 31 characters for formatting
-        return name_simple.substr(0,30);
-    }
-
-}
+constexpr struct {
+    const char* red     = "\e[1;31m";
+    const char* green   = "\e[1;32m";
+    const char* yellow  = "\e[1;33m";
+    const char* blue    = "\e[1;34m";
+    const char* magenta = "\e[1;35m";
+    const char* cyan    = "\e[1;36m";
+    const char* white   = "\e[1;37m";
+    const char* reset   = "\e[0m";
+} colours;
 
 namespace cpp_timer{
 
@@ -427,6 +390,42 @@ void Timer::getTotals_(LayerPtr layer){
             getTotals_(child);
         }
     }
+}
+
+// ================================================================================
+// ================================================================================
+
+std::string Timer::parseFunctionName(std::string name){
+    // Generally a function name has the form 
+    // type namespace1::namespace2::...::namespacen::functionName (args)
+    //     ^                                        ^             ^
+    // The caret symbols above show where the characters of interest are
+
+    // Find the first instance of a space
+    size_t space  = name.find(" ");
+
+    // If no space was found, return the entire string truncated to fit
+    if (space == std::string::npos){
+        return name.substr(0, 30);
+    }
+
+    // Find the fist instance of a "("
+    size_t bracket = name.find("(", space+1);
+    if (bracket == std::string::npos){
+        return name;
+    }
+
+    // Find the last '::' before this "("
+    size_t last_pos = name.find_last_of(":", bracket);
+    if (last_pos == std::string::npos){
+        last_pos = space;
+    }
+
+    // Return just the simplified version of the function name
+    std::string name_simple = name.substr(last_pos + 1, bracket - last_pos - 1);
+
+    // Keep the name inside 31 characters for formatting
+    return name_simple.substr(0,30);
 }
 
 } // namespace cpp_timer

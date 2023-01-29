@@ -199,6 +199,11 @@ private:
      * Variable for the total number of independent processes measured
      */
     int base_count_ = 1;
+
+    /**
+     * Parse a function name so that it reads well to a human, and fits inside the summary portion 
+     */
+    static std::string parseFunctionName(std::string name);
 };
 
 }   // namespace cpp_timer
