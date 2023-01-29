@@ -37,22 +37,25 @@
 #include "cpp_timer/Ticker.h"
 #include "cpp_timer/TimerTotal.h"
 
+using namespace std::string_literals;
+
 using std::cout;
 using std::endl;
 
 #define TICTOC_BUFFER_SIZE 500
 
 namespace{ 
-    std::map<std::string, std::string> colours = {{"red",     "\e[1;31m"}, 
-                                        {"green",   "\e[1;32m"},
-                                        {"yellow",  "\e[1;33m"},
-                                        {"blue",    "\e[1;34m"},
-                                        {"magenta", "\e[1;35m"},
-                                        {"cyan",    "\e[1;36m"},
-                                        {"white",   "\e[1;37m"},
-    };
 
-    std::string reset = "\e[0m";
+    constexpr struct {
+        const char* red     = "\e[1;31m";
+        const char* green   = "\e[1;32m";
+        const char* yellow  = "\e[1;33m";
+        const char* blue    = "\e[1;34m";
+        const char* magenta = "\e[1;35m";
+        const char* cyan    = "\e[1;36m";
+        const char* white   = "\e[1;37m";
+        const char* reset   = "\e[0m";
+    } colours;
 
     std::string parseFunctionName(std::string name){
         // Generally a function name has the form 
@@ -163,12 +166,12 @@ void Timer::summary(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdo
     LayerPtr* current_layer_ptr_ptr = &current_layer_;
 
     // Show the full function tree
-    std::cout << colours["green"] << "\n============================= FUNCTION BREAKDOWN =============================\n" << reset;
+    std::cout << colours.green << "\n============================= FUNCTION BREAKDOWN =============================\n" << colours.reset;
     printLayer_(current_layer_, breakdown_order);
 
     // Show the total time spent on each function, regardless of parent/child relations
-    std::cout << colours["green"]   << "\n\n=================================== SUMMARY ===================================\n";
-    std::cout << colours["magenta"] <<     "                               Total Time   |   Times Called   |   Average Time\n" << reset;
+    std::cout << colours.green   << "\n\n=================================== SUMMARY ===================================\n";
+    std::cout << colours.magenta <<     "                               Total Time   |   Times Called   |   Average Time\n" << colours.reset;
     
     // Sort the totals by the sorting mechanism presented
     getTotals_(current_layer_);
@@ -198,15 +201,15 @@ void Timer::summary(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdo
 
         std::string avg_unit     = normalizeDuration_(avg_time);        
         std::string total_unit   = normalizeDuration_(total_time);
-        std::string bar = colours["magenta"] + "   |   " + colours["cyan"];
+        std::string bar = colours.magenta + "   |   "s + colours.cyan;
 
         // Formatted output
-        std::cout << reset << std::setw(31) << std::left << name;
-        std::cout << colours["cyan"]  << std::setw(7) << std::right << total_time << total_unit << bar;
+        std::cout << colours.reset << std::setw(31) << std::left << name;
+        std::cout << colours.cyan  << std::setw(7) << std::right << total_time << total_unit << bar;
         std::cout << std::setw(12) << call_count << bar;
-        std::cout << std::setw(9) << avg_time << avg_unit << "\n";
+        std::cout << std::setw(9)  << avg_time << avg_unit << "\n";
     }
-    std::cout << reset << " " << std::endl;
+    std::cout << colours.reset << " " << std::endl;
 
     // Restart the tree thread
     tree_thread_ = std::thread(&Timer::buildTree_, this);
@@ -353,24 +356,24 @@ void Timer::printLayer_(const LayerPtr& layer, SummaryOrder order, long int prev
 
         // To make it look pretty
         if (layer->layer_index)
-            left_side << colours["magenta"] << std::setw(5*(layer->layer_index + 1)) << std::right << "|--- " << reset;
+            left_side << colours.magenta << std::setw(5*(layer->layer_index + 1)) << std::right << "|--- " << colours.reset;
         else {
             std::cout << '\n';
-            left_side << colours["green"] << base_count_++ << ": " << reset;
+            left_side << colours.green << base_count_++ << ": " << colours.reset;
         }
-        left_side << name << colours["blue"] << " (" << child->call_count << "): " << colours["cyan"] << normalized_duration << unit;
-        std::cout << std::setw(92) << std::left << left_side.str() << " " << colours["magenta"];  
+        left_side << name << colours.blue << " (" << child->call_count << "): " << colours.cyan << normalized_duration << unit;
+        std::cout << std::setw(92) << std::left << left_side.str() << " " << colours.magenta;  
 
         // Right side contains average runtime of each layer
         right_side << "(" << avg_dur << avg_unit << ")";
-        std::cout << std::setw(10) << std::right << right_side.str() << reset << '\n';
+        std::cout << std::setw(10) << std::right << right_side.str() << colours.reset << '\n';
 
         // Recursively print the next layer
         printLayer_(child, order, duration);
 
         // After all recursive calls have finished, print a dividing line
         if (layer->layer_index == 0)
-            cout << colours["white"] << "______________________________________________________________________________\n";
+            cout << colours.white << "______________________________________________________________________________\n";
     }
 
     // If the function body was at least 1ns, report it
@@ -380,12 +383,12 @@ void Timer::printLayer_(const LayerPtr& layer, SummaryOrder order, long int prev
         std::string function_unit = normalizeDuration_(prev_avg_dur);
 
         std::ostringstream left_side, right_side;
-        left_side << colours["magenta"] << std::setw(5*(layer->layer_index + 1)) << "|--- " << reset;
-        left_side << "Function Body: " << colours["cyan"] << prev_duration << unit;
+        left_side << colours.magenta << std::setw(5*(layer->layer_index + 1)) << "|--- " << colours.reset;
+        left_side << "Function Body: " << colours.cyan << prev_duration << unit;
         right_side << "(" << prev_avg_dur << function_unit << ")";
 
         std::cout << std::setw(86) << std::left << left_side.str();
-        std::cout << colours["magenta"] << std::setw(10) << std::right << right_side.str() << reset << '\n';
+        std::cout << colours.magenta << std::setw(10) << std::right << right_side.str() << colours.reset << '\n';
     }
 }
 
