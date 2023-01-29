@@ -62,8 +62,10 @@ namespace{
 
         // Find the first instance of a space
         size_t space  = name.find(" ");
+
+        // If no space was found, return the entire string truncated to fit
         if (space == std::string::npos){
-            return name.substr(0, 31);
+            return name.substr(0, 30);
         }
 
         // Find the fist instance of a "("
@@ -71,6 +73,7 @@ namespace{
         if (bracket == std::string::npos){
             return name;
         }
+
         // Find the last '::' before this "("
         size_t last_pos = name.find_last_of(":", bracket);
         if (last_pos == std::string::npos){
@@ -80,8 +83,8 @@ namespace{
         // Return just the simplified version of the function name
         std::string name_simple = name.substr(last_pos + 1, bracket - last_pos - 1);
 
-        // Keep the name inside 32 characters for formatting
-        return name_simple.substr(0,31);
+        // Keep the name inside 31 characters for formatting
+        return name_simple.substr(0,30);
     }
 
 }
@@ -160,12 +163,12 @@ void Timer::summary(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdo
     LayerPtr* current_layer_ptr_ptr = &current_layer_;
 
     // Show the full function tree
-    std::cout << colours["green"] << "\n============================= FUNCTION BREAKDOWN ==============================\n" << reset;
+    std::cout << colours["green"] << "\n============================= FUNCTION BREAKDOWN =============================\n" << reset;
     printLayer_(current_layer_, breakdown_order);
 
     // Show the total time spent on each function, regardless of parent/child relations
-    std::cout << colours["green"]   << "\n\n==================================== SUMMARY ===================================\n";
-    std::cout << colours["magenta"] << "\t\t\t\tTotal Time   |   Times Called   |   Average Time\n" << reset;
+    std::cout << colours["green"]   << "\n\n=================================== SUMMARY ===================================\n";
+    std::cout << colours["magenta"] <<     "                               Total Time   |   Times Called   |   Average Time\n" << reset;
     
     // Sort the totals by the sorting mechanism presented
     getTotals_(current_layer_);
@@ -175,13 +178,17 @@ void Timer::summary(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdo
     }
 
     // Assign the correct function for sorting
-    bool (*comp)(TimerTotal, TimerTotal) = 
-        total_order == BY_NAME    ? &TimerTotal::compareTotalByName   : 
-        total_order == BY_TOTAL   ? &TimerTotal::compareTotalByTotal  :
-        total_order == BY_AVERAGE ? &TimerTotal::compareTotalByAverage:
-                                    &TimerTotal::compareTotalByCallCount;
+    bool (*comp)(TimerTotal, TimerTotal) = std::invoke([total_order](){
+        switch (total_order){
+            case BY_NAME       : return &TimerTotal::compareTotalByName;
+            case BY_TOTAL      : return &TimerTotal::compareTotalByTotal;
+            case BY_AVERAGE    : return &TimerTotal::compareTotalByAverage;
+            case BY_CALL_COUNT : return &TimerTotal::compareTotalByCallCount;
+            default            : throw std::runtime_error("Cannot sort function totals by call order!");
+        }
+    });
 
-    std::sort(sorted_times.begin(), sorted_times.end(), *comp);
+    std::sort(sorted_times.begin(), sorted_times.end(), comp);
 
     for (const TimerTotal &T : sorted_times){
         std::string name    = parseFunctionName(T.name) + ":";
@@ -194,7 +201,7 @@ void Timer::summary(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdo
         std::string bar = colours["magenta"] + "   |   " + colours["cyan"];
 
         // Formatted output
-        std::cout << reset << std::setw(32) << std::left << name;
+        std::cout << reset << std::setw(31) << std::left << name;
         std::cout << colours["cyan"]  << std::setw(7) << std::right << total_time << total_unit << bar;
         std::cout << std::setw(12) << call_count << bar;
         std::cout << std::setw(9) << avg_time << avg_unit << "\n";
@@ -319,12 +326,15 @@ void Timer::printLayer_(const LayerPtr& layer, SummaryOrder order, long int prev
     }
 
     // Get the appropriate sorting function
-    bool(*comp)(const LayerPtr&, const LayerPtr&) = 
-        order == BY_NAME       ? &Layer::compareLayerByName:
-        order == BY_TOTAL      ? &Layer::compareLayerByTotal:
-        order == BY_AVERAGE    ? &Layer::compareLayerByAverage:
-        order == BY_CALL_COUNT ? &Layer::compareLayerByCallCount:
-                                 &Layer::compareLayerByCallOrder;
+    bool(*comp)(const LayerPtr&, const LayerPtr&) = std::invoke([order](){
+        switch (order){
+            case BY_NAME       : return &Layer::compareLayerByName;
+            case BY_TOTAL      : return &Layer::compareLayerByTotal;
+            case BY_AVERAGE    : return &Layer::compareLayerByAverage;
+            case BY_CALL_COUNT : return &Layer::compareLayerByCallCount;
+            case BY_CALL_ORDER : return &Layer::compareLayerByCallOrder;
+        }
+    });
 
     std::sort(sorted_layers.begin(), sorted_layers.end(), comp);
 
@@ -349,7 +359,7 @@ void Timer::printLayer_(const LayerPtr& layer, SummaryOrder order, long int prev
             left_side << colours["green"] << base_count_++ << ": " << reset;
         }
         left_side << name << colours["blue"] << " (" << child->call_count << "): " << colours["cyan"] << normalized_duration << unit;
-        std::cout << std::setw(93) << std::left << left_side.str() << " " << colours["magenta"];  
+        std::cout << std::setw(92) << std::left << left_side.str() << " " << colours["magenta"];  
 
         // Right side contains average runtime of each layer
         right_side << "(" << avg_dur << avg_unit << ")";
@@ -360,7 +370,7 @@ void Timer::printLayer_(const LayerPtr& layer, SummaryOrder order, long int prev
 
         // After all recursive calls have finished, print a dividing line
         if (layer->layer_index == 0)
-            cout << colours["white"] << "_______________________________________________________________________________\n";
+            cout << colours["white"] << "______________________________________________________________________________\n";
     }
 
     // If the function body was at least 1ns, report it
@@ -371,10 +381,10 @@ void Timer::printLayer_(const LayerPtr& layer, SummaryOrder order, long int prev
 
         std::ostringstream left_side, right_side;
         left_side << colours["magenta"] << std::setw(5*(layer->layer_index + 1)) << "|--- " << reset;
-        left_side << "Function Body: " << colours["cyan"] << prev_duration << function_unit;
-        right_side << "(" << prev_avg_dur << unit << ")";
+        left_side << "Function Body: " << colours["cyan"] << prev_duration << unit;
+        right_side << "(" << prev_avg_dur << function_unit << ")";
 
-        std::cout << std::setw(87) << std::left << left_side.str();
+        std::cout << std::setw(86) << std::left << left_side.str();
         std::cout << colours["magenta"] << std::setw(10) << std::right << right_side.str() << reset << '\n';
     }
 }
@@ -406,9 +416,6 @@ void Timer::getTotals_(LayerPtr layer){
         }else{
             const LayerPtr& new_layer = layer->children[name];
             totals_.insert({name, TimerTotal(name.c_str(), new_layer->call_count, new_layer->duration)});
-            // totals_[name] = std::pair<int, chronoDuration>();
-            // totals_[name].first  = layer->children[name]->call_count;
-            // totals_[name].second = layer->children[name]->duration;
         }
 
         // If this child has children, repeat
