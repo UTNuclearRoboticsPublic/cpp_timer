@@ -331,6 +331,7 @@ void Timer::printLayer_(const LayerPtr& layer, SummaryOrder order, long int prev
     // Get the appropriate sorting function
     bool(*comp)(const LayerPtr&, const LayerPtr&) = std::invoke([order](){
         switch (order){
+            default:
             case BY_NAME       : return &Layer::compareLayerByName;
             case BY_TOTAL      : return &Layer::compareLayerByTotal;
             case BY_AVERAGE    : return &Layer::compareLayerByAverage;
