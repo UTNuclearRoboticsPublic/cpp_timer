@@ -37,14 +37,13 @@
 #include "cpp_timer/Ticker.h"
 #include "cpp_timer/TimerTotal.h"
 
-using std::string;
 using std::cout;
 using std::endl;
 
 #define TICTOC_BUFFER_SIZE 500
 
 namespace{ 
-    std::map<string, string> colours = {{"red",     "\e[1;31m"}, 
+    std::map<std::string, std::string> colours = {{"red",     "\e[1;31m"}, 
                                         {"green",   "\e[1;32m"},
                                         {"yellow",  "\e[1;33m"},
                                         {"blue",    "\e[1;34m"},
@@ -53,9 +52,9 @@ namespace{
                                         {"white",   "\e[1;37m"},
     };
 
-    string reset = "\e[0m";
+    std::string reset = "\e[0m";
 
-    string parseFunctionName(string name){
+    std::string parseFunctionName(std::string name){
         // Generally a function name has the form 
         // type namespace1::namespace2::...::namespacen::functionName (args)
         //     ^                                        ^             ^
@@ -63,23 +62,23 @@ namespace{
 
         // Find the first instance of a space
         size_t space  = name.find(" ");
-        if (space == string::npos){
+        if (space == std::string::npos){
             return name.substr(0, 31);
         }
 
         // Find the fist instance of a "("
         size_t bracket = name.find("(", space+1);
-        if (bracket == string::npos){
+        if (bracket == std::string::npos){
             return name;
         }
         // Find the last '::' before this "("
         size_t last_pos = name.find_last_of(":", bracket);
-        if (last_pos == string::npos){
+        if (last_pos == std::string::npos){
             last_pos = space;
         }
 
         // Return just the simplified version of the function name
-        string name_simple = name.substr(last_pos + 1, bracket - last_pos - 1);
+        std::string name_simple = name.substr(last_pos + 1, bracket - last_pos - 1);
 
         // Keep the name inside 32 characters for formatting
         return name_simple.substr(0,31);
