@@ -176,6 +176,7 @@ void Timer::summary(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdo
 
     // Restart the tree thread
     tree_thread_ = std::thread(&Timer::buildTree_, this);
+    base_count_  = 1;
     while(concluded_);
 }
 
