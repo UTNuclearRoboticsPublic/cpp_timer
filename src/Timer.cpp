@@ -45,14 +45,14 @@ using std::endl;
 #define TICTOC_BUFFER_SIZE 500
 
 constexpr struct {
-    const char* red     = "\e[1;31m";
-    const char* green   = "\e[1;32m";
-    const char* yellow  = "\e[1;33m";
-    const char* blue    = "\e[1;34m";
-    const char* magenta = "\e[1;35m";
-    const char* cyan    = "\e[1;36m";
-    const char* white   = "\e[1;37m";
-    const char* reset   = "\e[0m";
+    const char* red     = "\033[1;31m";
+    const char* green   = "\033[1;32m";
+    const char* yellow  = "\033[1;33m";
+    const char* blue    = "\033[1;34m";
+    const char* magenta = "\033[1;35m";
+    const char* cyan    = "\033[1;36m";
+    const char* white   = "\033[1;37m";
+    const char* reset   = "\033[0m";
 } colours;
 
 namespace cpp_timer{
@@ -126,8 +126,6 @@ void Timer::summary(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdo
         current_layer_ = current_layer_->parent;
     }
 
-    LayerPtr* current_layer_ptr_ptr = &current_layer_;
-
     // Show the full function tree
     std::cout << colours.green << "\n============================= FUNCTION BREAKDOWN =============================\n" << colours.reset;
     printLayer_(current_layer_, breakdown_order);
@@ -139,6 +137,7 @@ void Timer::summary(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdo
     // Sort the totals by the sorting mechanism presented
     getTotals_(current_layer_);
     std::vector<TimerTotal> sorted_times;
+    sorted_times.reserve(totals_.size());
     for (const auto& [name, total] : totals_){
         sorted_times.push_back(total);
     }
@@ -269,14 +268,14 @@ void Timer::buildTree_(){
 // ================================================================================
 
 std::string Timer::normalizeDuration_(long int& duration) const{
-    static const std::array<std::string,3> units = {" ns", " us", " ms"};
+    static constexpr std::array units = {" ns", " us", " ms"};
     size_t div_count = 0;
     while (duration > 1000 && div_count < (units.size() - 1)){
         duration /= 1000;
         ++div_count;
     }
 
-    return units.at(div_count);
+    return std::string(units.at(div_count));
 }
 
 // ================================================================================
