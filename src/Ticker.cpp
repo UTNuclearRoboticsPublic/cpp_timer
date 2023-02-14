@@ -3,7 +3,7 @@
 
 namespace cpp_timer{
 
-Ticker::Ticker(const char* name, Timer* timer) : name_(name), timer_(timer) {
+Ticker::Ticker(const char* name, Timer* timer) : timer_(timer), name_(name) {
     timer_->tic(name_);
 }
 
