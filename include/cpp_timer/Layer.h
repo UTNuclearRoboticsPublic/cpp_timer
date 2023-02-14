@@ -21,7 +21,7 @@ struct Layer{
     }
 
     static bool compareLayerByAverage(const cpp_timer::LayerPtr& L1, const cpp_timer::LayerPtr& L2){
-        return L1->duration.count()/(float)L1->call_count > L2->duration.count()/(float)L2->call_count;
+        return (float)L1->duration.count()/(float)L1->call_count > (float)L2->duration.count()/(float)L2->call_count;
     }
 
     static bool compareLayerByTotal(const cpp_timer::LayerPtr& L1, const cpp_timer::LayerPtr& L2){

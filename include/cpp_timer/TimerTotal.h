@@ -20,7 +20,7 @@ struct TimerTotal{
     }
 
     static bool compareTotalByAverage(TimerTotal P1, TimerTotal P2){
-        return P1.duration.count()/(float)P1.call_count > P2.duration.count()/(float)P2.call_count;
+        return (float)P1.duration.count()/(float)P1.call_count > (float)P2.duration.count()/(float)P2.call_count;
     }
 
     static bool compareTotalByTotal(TimerTotal P1, TimerTotal P2){
