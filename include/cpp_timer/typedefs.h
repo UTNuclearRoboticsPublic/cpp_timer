@@ -16,9 +16,9 @@ class Ticker;
 typedef std::shared_ptr<cpp_timer::Layer> LayerPtr;
 typedef std::chrono::steady_clock::time_point chronoTime;
 typedef std::chrono::duration<long int, std::nano> chronoDuration;
-typedef std::map<std::string, chronoDuration> durationMap;
-typedef std::map<std::string, LayerPtr> layerMap;
-typedef std::map<std::string, std::pair<int, chronoDuration>> timerTotal;
+typedef std::map<std::string_view, chronoDuration> durationMap;
+typedef std::map<std::string_view, LayerPtr> layerMap;
+typedef std::map<std::string_view, std::pair<int, chronoDuration>> timerTotal;
 
 }
 

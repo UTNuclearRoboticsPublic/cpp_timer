@@ -42,7 +42,7 @@ using namespace std::string_literals;
 using std::cout;
 using std::endl;
 
-#define TICTOC_BUFFER_SIZE 500
+#define TICTOC_BUFFER_SIZE 1000
 
 constexpr struct {
     const char* red     = "\033[1;31m";
@@ -61,7 +61,7 @@ namespace cpp_timer{
 // ================================================================================
 
 Timer::Timer() {
-    current_layer_ = LayerPtr(new Layer);
+    current_layer_ = std::make_shared<Layer>();
     current_layer_->layer_index = 0;
     current_layer_->name = "__TIMER_BASE_LAYER__";
     all_layers_.push_back(current_layer_);
@@ -86,7 +86,7 @@ Timer::~Timer(){
 // ================================================================================
 
 void Timer::tic(const char* function_name){
-    std::unique_lock<std::mutex> tree_lock(tree_mtx_);
+    std::lock_guard<std::mutex> tree_lock(tree_mtx_);
     tictocs_.emplace_back(function_name, std::chrono::steady_clock::now(), TicLabel::TICK);
 }
 
@@ -94,9 +94,10 @@ void Timer::tic(const char* function_name){
 // ================================================================================
 
 void Timer::toc(const char* function_name){ 
+    const auto now = std::chrono::steady_clock::now(); 
     {
-        std::unique_lock<std::mutex> tree_lock(tree_mtx_); 
-        tictocs_.emplace_back(function_name, std::chrono::steady_clock::now(), TicLabel::TOCK);  
+        std::lock_guard<std::mutex> tree_lock(tree_mtx_); 
+        tictocs_.emplace_back(function_name, now, TicLabel::TOCK);  
     }    
     tree_contition_.notify_one();
 }
@@ -131,8 +132,8 @@ void Timer::summary(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdo
     printLayer_(current_layer_, breakdown_order);
 
     // Show the total time spent on each function, regardless of parent/child relations
-    std::cout << colours.green   << "\n\n=================================== SUMMARY ===================================\n";
-    std::cout << colours.magenta <<     "                               Total Time   |   Times Called   |   Average Time\n" << colours.reset;
+    std::cout << colours.green   << "\n\n==================================== SUMMARY ===================================\n";
+    std::cout << colours.magenta <<     "                                Total Time   |   Times Called   |   Average Time\n" << colours.reset;
     
     // Sort the totals by the sorting mechanism presented
     getTotals_(current_layer_);
@@ -156,17 +157,17 @@ void Timer::summary(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdo
     std::sort(sorted_times.begin(), sorted_times.end(), comp);
 
     for (const TimerTotal &T : sorted_times){
-        std::string name    = parseFunctionName(T.name) + ":";
-        long int total_time = T.duration.count();
-        int call_count      = T.call_count;
-        long int avg_time   = total_time/call_count;
+        std::string_view name = parseFunctionName(T.name);
+        long int total_time   = T.duration.count();
+        int call_count        = T.call_count;
+        long int avg_time     = total_time/call_count;
 
-        std::string avg_unit     = normalizeDuration_(avg_time);        
-        std::string total_unit   = normalizeDuration_(total_time);
-        std::string bar = colours.magenta + "   |   "s + colours.cyan;
+        const std::string_view avg_unit   = normalizeDuration_(avg_time);        
+        const std::string_view total_unit = normalizeDuration_(total_time);
+        const std::string bar = colours.magenta + "   |   "s + colours.cyan;
 
         // Formatted output
-        std::cout << colours.reset << std::setw(31) << std::left << name;
+        std::cout << colours.reset << std::setw(31) << std::left << name << ":";
         std::cout << colours.cyan  << std::setw(7) << std::right << total_time << total_unit << bar;
         std::cout << std::setw(12) << call_count << bar;
         std::cout << std::setw(9)  << avg_time << avg_unit << "\n";
@@ -267,7 +268,7 @@ void Timer::buildTree_(){
 // ================================================================================
 // ================================================================================
 
-std::string Timer::normalizeDuration_(long int& duration) const{
+std::string_view Timer::normalizeDuration_(long int& duration) const{
     static constexpr std::array units = {" ns", " us", " ms"};
     size_t div_count = 0;
     while (duration > 1000 && div_count < (units.size() - 1)){
@@ -275,7 +276,7 @@ std::string Timer::normalizeDuration_(long int& duration) const{
         ++div_count;
     }
 
-    return std::string(units.at(div_count));
+    return units.at(div_count);
 }
 
 // ================================================================================
@@ -307,14 +308,14 @@ void Timer::printLayer_(const LayerPtr& layer, SummaryOrder order, long int prev
 
     for (const LayerPtr& child : sorted_layers){
         // Get the child layer info
-        std::string name  = parseFunctionName(child->name);
-        long int duration = std::chrono::duration_cast<std::chrono::nanoseconds>(child->duration).count();
-        long int avg_dur  = duration/child->call_count;
-        prev_duration    -= duration;
+        std::string_view name  = parseFunctionName(child->name);
+        long int duration      = std::chrono::duration_cast<std::chrono::nanoseconds>(child->duration).count();
+        long int avg_dur       = duration/child->call_count;
+        prev_duration         -= duration;
 
         auto normalized_duration = duration;
-        std::string unit = normalizeDuration_(normalized_duration);
-        std::string avg_unit = normalizeDuration_(avg_dur); 
+        const std::string_view unit = normalizeDuration_(normalized_duration);
+        const std::string_view avg_unit = normalizeDuration_(avg_dur); 
 
         std::ostringstream left_side, right_side;
 
@@ -343,8 +344,8 @@ void Timer::printLayer_(const LayerPtr& layer, SummaryOrder order, long int prev
     // If the function body was at least 1ns, report it
     if (prev_duration > 0){
         long int prev_avg_dur = prev_duration/layer->call_count;
-        std::string unit = normalizeDuration_(prev_duration);
-        std::string function_unit = normalizeDuration_(prev_avg_dur);
+        const std::string_view unit = normalizeDuration_(prev_duration);
+        const std::string_view function_unit = normalizeDuration_(prev_avg_dur);
 
         std::ostringstream left_side, right_side;
         left_side << colours.magenta << std::setw(5*(layer->layer_index + 1)) << "|--- " << colours.reset;
@@ -382,7 +383,7 @@ void Timer::getTotals_(LayerPtr layer){
         // If we do not have this label yet, create a new entry for it
         }else{
             const LayerPtr& new_layer = layer->children[name];
-            totals_.insert({name, TimerTotal(name.c_str(), new_layer->call_count, new_layer->duration)});
+            totals_.insert({name, TimerTotal(name, new_layer->call_count, new_layer->duration)});
         }
 
         // If this child has children, repeat
@@ -395,7 +396,7 @@ void Timer::getTotals_(LayerPtr layer){
 // ================================================================================
 // ================================================================================
 
-std::string Timer::parseFunctionName(std::string name){
+std::string_view Timer::parseFunctionName(std::string_view name){
     // Generally a function name has the form 
     // type namespace1::namespace2::...::namespacen::functionName (args)
     //     ^                                        ^             ^
@@ -422,7 +423,7 @@ std::string Timer::parseFunctionName(std::string name){
     }
 
     // Return just the simplified version of the function name
-    std::string name_simple = name.substr(last_pos + 1, bracket - last_pos - 1);
+    auto name_simple = name.substr(last_pos + 1, bracket - last_pos - 1);
 
     // Keep the name inside 31 characters for formatting
     return name_simple.substr(0,30);

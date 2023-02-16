@@ -1,12 +1,13 @@
 #ifndef TIMER_LAYER_HH_
 #define TIMER_LAYER_HH_
 
+#include <string>
 #include "cpp_timer/typedefs.h"
 
 namespace cpp_timer{
 
 struct Layer{
-    const char* name;
+    std::string_view name;
     int layer_index;
     int call_count = 1;
     int call_idx = 0;

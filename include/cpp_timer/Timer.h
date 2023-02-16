@@ -188,12 +188,12 @@ private:
      * Report a duration in the most intuitive units (largest being milliseconds)
      * @return          The string of the unit for this duration 
      */
-    std::string normalizeDuration_(long int& dur_ns) const;
+    std::string_view normalizeDuration_(long int& dur_ns) const;
 
     /**
      * Variable to store the total time taken in each process
      */
-    std::map<std::string, TimerTotal> totals_;
+    std::map<std::string_view, TimerTotal> totals_;
 
     /**
      * Variable for the total number of independent processes measured
@@ -203,7 +203,7 @@ private:
     /**
      * Parse a function name so that it reads well to a human, and fits inside the summary portion 
      */
-    static std::string parseFunctionName(std::string name);
+    static std::string_view parseFunctionName(std::string_view name);
 };
 
 }   // namespace cpp_timer
