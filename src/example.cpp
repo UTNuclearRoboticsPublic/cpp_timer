@@ -113,6 +113,36 @@ int main(){
     timer.tic("reallyLongFunctionNameThatDoesntQuiteFit");
     timer.toc("reallyLongFunctionNameThatDoesntQuiteFit");
 
+    // Let's benchmark against a basic std::chrono time point check
+    const std::chrono::nanoseconds::rep loop_count = 1e6;
+    std::chrono::nanoseconds dur(0);
+    for (int i = 0; i < loop_count; i++){
+        const auto t1 = std::chrono::steady_clock::now();
+        const auto t2 = std::chrono::steady_clock::now();
+        dur += (t2 - t1);
+    }
+    dur /= loop_count;
+    printf("Internal benchmark: \n");
+    printf("\t * Total time it took for chrono: %ld ns\n", dur.count());
+
+    std::chrono::nanoseconds tic_dur(0);
+    std::chrono::nanoseconds toc_dur(0);
+    for (int i = 0; i < loop_count; i++){
+        // Use chrono to measure tic and toc times
+        const auto tic_t1 = std::chrono::steady_clock::now();
+        timer.tic("Test TicToc Duration");
+        const auto tic_t2 = std::chrono::steady_clock::now();
+        const auto toc_t1 = std::chrono::steady_clock::now();
+        timer.toc("Test TicToc Duration");
+        const auto toc_t2 = std::chrono::steady_clock::now();
+
+        // Subtract the part that we calculated comes from std::chrono
+        tic_dur += (tic_t2 - tic_t1 - dur);
+        toc_dur += (toc_t2 - toc_t1 - dur);
+    }
+    printf("\t * On average a tic took %ld ns\n", tic_dur.count()/loop_count);
+    printf("\t * On average a toc took %ld ns\n", toc_dur.count()/loop_count);
+
     // Calling timer outside recursive functions only counts as one call
     timer.tic("fibonacci_flat_outside");
     fibonacci_flat(5);
