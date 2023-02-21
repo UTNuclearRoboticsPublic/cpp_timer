@@ -158,9 +158,9 @@ void Timer::summary(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdo
 
     for (const TimerTotal &T : sorted_times){
         std::string_view name = parseFunctionName(T.name);
-        long int total_time   = T.duration.count();
-        int call_count        = T.call_count;
-        long int avg_time     = total_time/call_count;
+        time_t total_time   = T.duration.count();
+        int call_count      = T.call_count;
+        time_t avg_time     = total_time/call_count;
 
         const std::string_view avg_unit   = normalizeDuration_(avg_time);        
         const std::string_view total_unit = normalizeDuration_(total_time);
@@ -268,7 +268,7 @@ void Timer::buildTree_(){
 // ================================================================================
 // ================================================================================
 
-std::string_view Timer::normalizeDuration_(long int& duration) const{
+std::string_view Timer::normalizeDuration_(time_t& duration) const{
     static constexpr std::array units = {" ns", " us", " ms"};
     size_t div_count = 0;
     while (duration > 1000 && div_count < (units.size() - 1)){
@@ -282,7 +282,7 @@ std::string_view Timer::normalizeDuration_(long int& duration) const{
 // ================================================================================
 // ================================================================================
 
-void Timer::printLayer_(const LayerPtr& layer, SummaryOrder order, long int prev_duration){
+void Timer::printLayer_(const LayerPtr& layer, SummaryOrder order, time_t prev_duration){
     if (layer->children.empty()) return;
 
     // Sort the individual layers by the specified order
@@ -309,8 +309,8 @@ void Timer::printLayer_(const LayerPtr& layer, SummaryOrder order, long int prev
     for (const LayerPtr& child : sorted_layers){
         // Get the child layer info
         std::string_view name  = parseFunctionName(child->name);
-        long int duration      = std::chrono::duration_cast<std::chrono::nanoseconds>(child->duration).count();
-        long int avg_dur       = duration/child->call_count;
+        time_t duration      = std::chrono::duration_cast<std::chrono::nanoseconds>(child->duration).count();
+        time_t avg_dur       = duration/child->call_count;
         prev_duration         -= duration;
 
         auto normalized_duration = duration;
@@ -343,7 +343,7 @@ void Timer::printLayer_(const LayerPtr& layer, SummaryOrder order, long int prev
 
     // If the function body was at least 1ns, report it
     if (prev_duration > 0){
-        long int prev_avg_dur = prev_duration/layer->call_count;
+        time_t prev_avg_dur = prev_duration/layer->call_count;
         const std::string_view unit = normalizeDuration_(prev_duration);
         const std::string_view function_unit = normalizeDuration_(prev_avg_dur);
 

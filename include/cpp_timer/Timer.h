@@ -71,6 +71,8 @@ public:
      */
     ~Timer();
 
+    using time_t = std::chrono::steady_clock::rep;
+
     /**
      * Start timer for function
      * @brief                   Start timer for function
@@ -159,7 +161,7 @@ private:
     /**
      * Recursively print a layer and all of it's children
      */
-    void printLayer_(const LayerPtr& layer, SummaryOrder order, long int prev_duration = 0);
+    void printLayer_(const LayerPtr& layer, SummaryOrder order, time_t prev_duration = 0);
 
     /**
      * Get the total time spent in a layer through recursive calculation
@@ -188,7 +190,7 @@ private:
      * Report a duration in the most intuitive units (largest being milliseconds)
      * @return          The string of the unit for this duration 
      */
-    std::string_view normalizeDuration_(long int& dur_ns) const;
+    std::string_view normalizeDuration_(time_t& dur_ns) const;
 
     /**
      * Variable to store the total time taken in each process
