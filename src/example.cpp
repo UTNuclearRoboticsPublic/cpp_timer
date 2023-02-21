@@ -122,8 +122,8 @@ int main(){
         dur += (t2 - t1);
     }
     dur /= loop_count;
-    printf("Internal benchmark: \n");
-    printf("\t * Total time it took for chrono: %ld ns\n", dur.count());
+    std::cout << "Internal benchmark: \n";
+    std::cout << "\t * Total time it took for chrono: " << dur.count() << " ns\n";
 
     std::chrono::nanoseconds tic_dur(0);
     std::chrono::nanoseconds toc_dur(0);
@@ -140,8 +140,8 @@ int main(){
         tic_dur += (tic_t2 - tic_t1 - dur);
         toc_dur += (toc_t2 - toc_t1 - dur);
     }
-    printf("\t * On average a tic took %ld ns\n", tic_dur.count()/loop_count);
-    printf("\t * On average a toc took %ld ns\n", toc_dur.count()/loop_count);
+    std::cout << "\t * On average a tic took " << tic_dur.count()/loop_count << " ns\n";
+    std::cout << "\t * On average a toc took " << toc_dur.count()/loop_count << " ns\n";
 
     // Calling timer outside recursive functions only counts as one call
     timer.tic("fibonacci_flat_outside");
