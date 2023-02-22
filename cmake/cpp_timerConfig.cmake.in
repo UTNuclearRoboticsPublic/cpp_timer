@@ -1,0 +1,7 @@
+get_filename_component(_dir "${CMAKE_CURRENT_LIST_FILE}" PATH)
+get_filename_component(_prefix "${_dir}/../../.." ABSOLUTE)
+
+include("${_dir}/cpp_timerTargets.cmake")
+
+set(cpp_timer_INCLUDE_DIRS ${_prefix}/include/cpp_timer)
+set(cpp_timer_LIBRARIES cpp_timer)

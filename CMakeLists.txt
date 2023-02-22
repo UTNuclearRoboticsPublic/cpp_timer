@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.0.2)
 project(cpp_timer)
+set(version 1.0)
 
 ## Compile as C++17
 add_compile_options(-std=c++17)
@@ -13,32 +14,18 @@ include_directories(
 )
 
 ## Declare the C++ library
-add_library(cpp_timer SHARED src/Timer.cpp src/Ticker.cpp)
-target_link_libraries(cpp_timer -lpthread)
-target_compile_options(cpp_timer PRIVATE -g -Wall -Wextra -Wpedantic -Wconversion)
+add_library(${PROJECT_NAME} SHARED src/Timer.cpp src/Ticker.cpp)
+target_link_libraries(${PROJECT_NAME} -lpthread)
+target_compile_options(${PROJECT_NAME} PRIVATE -O3 -Wall -Wextra -Wpedantic -Wconversion)
 
 ## Executable for demonstration purposes
 add_executable(example src/example.cpp)
-target_link_libraries(example cpp_timer)
-target_compile_options(example PRIVATE -O0 -g) # remove optimizations and add debug symbols
+target_link_libraries(example ${PROJECT_NAME})
+target_compile_options(example PRIVATE -g) # add debug symbols
 
 #############
 ## Install ##
 #############
-
-## Mark libraries for installation
-install(
-  TARGETS cpp_timer  
-  EXPORT cpp_timerConfig
-  LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
-)
-
-## Install the config file associated with the cpp_timer lib
-install(
-  EXPORT cpp_timerConfig
-  DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/cmake/${PROJECT_NAME}
-  NAMESPACE cpp_timer::
-)
 
 ## Mark header files for installation
 install(
@@ -48,3 +35,29 @@ install(
   PATTERN "*.h" 
 )
 
+## Mark libraries for installation
+install(TARGETS  
+  ${PROJECT_NAME}
+  EXPORT   "${PROJECT_NAME}Targets"
+  LIBRARY  DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${PROJECT_NAME}
+  INCLUDES DESTINATION ${CMAKE_INSTALL_PREFIX}/include
+)
+
+## Install the targets file associated with the lib
+install(EXPORT 
+  "${PROJECT_NAME}Targets"
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${PROJECT_NAME}/cmake/
+)
+
+## Configure the config file to have the necessary defines
+configure_file(
+  "${PROJECT_SOURCE_DIR}/cmake/${PROJECT_NAME}Config.cmake.in"
+  "${PROJECT_BINARY_DIR}/cmake/${PROJECT_NAME}Config.cmake"
+  @ONLY
+)
+
+## Finally install the config file so that cmake can find it
+install(FILES
+  "${PROJECT_BINARY_DIR}/cmake/${PROJECT_NAME}Config.cmake"
+  DESTINATION ${CMAKE_INSTALL_PREFIX}/lib/${PROJECT_NAME}/cmake
+)
