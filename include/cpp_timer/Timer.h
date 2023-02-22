@@ -151,7 +151,7 @@ private:
     /**
      * Boolean flag indicating whether the thread should conclude 
      */
-    bool concluded_ = true;
+    volatile bool concluded_ = true;
 
     /**
      * Vector of all layers in the problem
