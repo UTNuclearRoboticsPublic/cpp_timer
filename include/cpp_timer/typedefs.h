@@ -5,6 +5,7 @@
 #include <string>
 #include <chrono>
 #include <memory>
+#include <string_view>
 
 namespace cpp_timer{
 
