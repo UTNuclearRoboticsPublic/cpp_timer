@@ -124,7 +124,7 @@ void Timer::summary(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdo
 
     // Reset our state to the base layer
     while(current_layer_->layer_index != 0){
-        current_layer_ = current_layer_->parent;
+        current_layer_ = current_layer_->parent.lock();
     }
 
     // Show the full function tree
@@ -221,8 +221,8 @@ void Timer::treeToc_(TicLabel label){
 
     // Move up a layer if possible
     if (current_layer_->layer_index != 0){
-        current_layer_->parent->children.at(label.name)->duration += duration;
-        current_layer_ = current_layer_->parent;
+        current_layer_->parent.lock()->children.at(label.name)->duration += duration;
+        current_layer_ = current_layer_->parent.lock();
     }
 
     // Now that we've used the most recent start time, we can get rid of it
@@ -372,7 +372,7 @@ void Timer::getTotals_(LayerPtr layer){
         bool is_recursive = false;
         while (parent != all_layers_[0] and not is_recursive){
             is_recursive = (parent->name == name);
-            parent = parent->parent;
+            parent = parent->parent.lock();
         }
 
         // Note that subsequent recursive calls do not increase total time

@@ -12,7 +12,7 @@ struct Layer{
     int call_count = 1;
     int call_idx = 0;
     int child_idx = 0;
-    LayerPtr parent;
+    ParentPtr parent;
     layerMap children;
     chronoDuration duration = chronoDuration(0);
 
