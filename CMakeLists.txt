@@ -17,6 +17,7 @@ include_directories(
 add_library(${PROJECT_NAME} SHARED src/Timer.cpp src/Ticker.cpp)
 target_link_libraries(${PROJECT_NAME} -lpthread)
 target_compile_options(${PROJECT_NAME} PRIVATE -O3 -Wall -Wextra -Wpedantic -Wconversion)
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
 ## Executable for demonstration purposes
 add_executable(example src/example.cpp)
