@@ -221,8 +221,17 @@ void Timer::treeToc_(TicLabel label){
 
     // Move up a layer if possible
     if (current_layer_->layer_index != 0){
-        current_layer_->parent.lock()->children.at(label.name)->duration += duration;
-        current_layer_ = current_layer_->parent.lock();
+        try{
+            current_layer_->parent.lock()->children.at(label.name)->duration += duration;
+            current_layer_ = current_layer_->parent.lock();
+        }catch(std::out_of_range& e){
+            std::cout << "Cannot toc the label \"" << label.name << "\" when the current label is \"" << current_layer_->name << "\"\n";
+            std::cout << "Current layer parent is " << current_layer_->parent.lock()->name << " with children\n";
+            for (const auto& [name, _] : current_layer_->parent.lock()->children){
+                std::cout << "\t" << name << "\n";
+            }
+            throw;
+        }
     }
 
     // Now that we've used the most recent start time, we can get rid of it
