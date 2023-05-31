@@ -3,6 +3,8 @@
 
 static cpp_timer::Timer timer;
 
+using namespace std::chrono_literals;
+
 // Defining a TIMER_INSTANCE allows you to use Timer's Macros: TIMER_TIC and TIMER_TOC
 #define TIMER_INSTANCE timer
 
@@ -20,6 +22,10 @@ void efficientFuction(std::vector<double> &vec){
     timer.tic("efficientFunction");
     vec.clear();
     timer.toc("efficientFunction");
+}
+
+void sleeperFunction(){
+    std::this_thread::sleep_for(1s);
 }
 
 // Example of using the timer to time blocks of code within a scope
@@ -53,6 +59,24 @@ void childFunction2(){
     timer.tic("childFunction1");
     childFunction1();
     timer.toc("childFunction1");
+}
+
+void multithreadedFunction(){
+    std::vector<std::thread> threads(5);
+    volatile uint64_t sum = 0;
+    auto work = [&sum](){
+        for (int i = 0; i < 1e8; i++){
+            sum++;
+        }
+    };
+
+    for (int i = 0; i < 5; i++){
+        threads[i] = std::thread(work);
+    }
+
+    for (auto& thread : threads){
+        thread.join();
+    }
 }
 
 void parentFunction(){
@@ -100,26 +124,17 @@ int fibonacci_flat(int n){
     }
 }
 
-int main(){
-    for (int i = 0; i < 2500; i++){
-        std::vector<double> dummy_vec1(10000);
-        efficientFuction(dummy_vec1);
-    }
-
-    // This function contains many internal timer calls
-    parentFunction();
-
-    // Very long function names will be truncated in the final summary
-    timer.tic("reallyLongFunctionNameThatDoesntQuiteFit");
-    timer.toc("reallyLongFunctionNameThatDoesntQuiteFit");
-
+void benchmarkTicAndToc(){
     // Let's benchmark against a basic std::chrono time point check
     const std::chrono::nanoseconds::rep loop_count = 1e6;
     std::chrono::nanoseconds dur(0);
+    auto sum = 0;
     for (int i = 0; i < loop_count; i++){
         const auto t1 = std::chrono::steady_clock::now();
+        const auto unused_t = std::chrono::steady_clock::now();
         const auto t2 = std::chrono::steady_clock::now();
         dur += (t2 - t1);
+        sum += unused_t.time_since_epoch().count();
     }
     dur /= loop_count;
     std::cout << "Internal benchmark: \n";
@@ -142,6 +157,41 @@ int main(){
     }
     std::cout << "\t * On average a tic took " << tic_dur.count()/loop_count << " ns\n";
     std::cout << "\t * On average a toc took " << toc_dur.count()/loop_count << " ns\n";
+
+    std::chrono::nanoseconds cpu_tic_dur(0);
+    std::chrono::nanoseconds cpu_toc_dur(0);
+    for (int i = 0; i < loop_count; i++){
+        // Use chrono to measure tic and toc times
+        const auto tic_t1 = std::chrono::steady_clock::now();
+        timer.ticCpu("Test TicToc Duration");
+        const auto tic_t2 = std::chrono::steady_clock::now();
+        const auto toc_t1 = std::chrono::steady_clock::now();
+        timer.tocCpu("Test TicToc Duration");
+        const auto toc_t2 = std::chrono::steady_clock::now();
+
+        // Subtract the part that we calculated comes from std::chrono
+        cpu_tic_dur += (tic_t2 - tic_t1 - dur);
+        cpu_toc_dur += (toc_t2 - toc_t1 - dur);
+    }
+    std::cout << "\t * On average a CPU tic took " << cpu_tic_dur.count()/loop_count << " ns\n";
+    std::cout << "\t * On average a CPU toc took " << cpu_toc_dur.count()/loop_count << " ns\n";
+}
+
+int main(){
+    // Compare cpp_timer to bare std::chrono implementation
+    benchmarkTicAndToc();
+
+    for (int i = 0; i < 2500; i++){
+        std::vector<double> dummy_vec1(10000);
+        efficientFuction(dummy_vec1);
+    }
+
+    // This function contains many internal timer calls
+    parentFunction();
+
+    // Very long function names will be truncated in the final summary
+    timer.tic("reallyLongFunctionNameThatDoesntQuiteFit");
+    timer.toc("reallyLongFunctionNameThatDoesntQuiteFit");
 
     // Calling timer outside recursive functions only counts as one call
     timer.tic("fibonacci_flat_outside");
@@ -167,6 +217,27 @@ int main(){
 
         auto _ = timer.scopedTic("scope_overhead");
     }
+
+    // Here's the difference between real and cpu time
+    timer.tic("RealVsCpu");
+
+    timer.tic("realTime");
+    sleeperFunction();
+    timer.toc("realTime");
+
+    timer.ticCpu("cpuTime");
+    sleeperFunction();
+    timer.tocCpu("cpuTime");
+
+    timer.tic("multithreadedReal");
+    multithreadedFunction();
+    timer.toc("multithreadedReal");
+
+    timer.ticCpu("multithreadedCpu");
+    multithreadedFunction();
+    timer.tocCpu("multithreadedCpu");
+
+    timer.toc("RealVsCpu");
 
     // Print the overall summary in decreaseing runtime order, and the function breakdown in the order the functions were called
     timer.summary(cpp_timer::Timer::SummaryOrder::BY_TOTAL, cpp_timer::Timer::SummaryOrder::BY_CALL_ORDER);

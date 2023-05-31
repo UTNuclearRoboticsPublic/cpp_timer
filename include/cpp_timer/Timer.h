@@ -75,7 +75,6 @@ public:
 
     /**
      * Start timer for function
-     * @brief                   Start timer for function
      * @param function_name     Name with which to store the function time
      *                          Does not have to match the actual function name
      * @return                  None
@@ -85,12 +84,28 @@ public:
 
     /**
      * Close timer for function
-     * @brief                   Close timer for function
      * @param function_name     Name with which to store the function time
      *                          Does not have to match the actual function name
      * @return                  None
      */
     void toc(const char* function_name);
+
+    /**
+     * Start timer for function (CPU time)
+     * @param function_name     Name with which to store the function time
+     *                          Does not have to match the actual function name
+     * @return                  None
+     * @note                    All ticCpu() calls MUST be paired with a corresponding tocCpu() call
+     */
+    void ticCpu(const char* function_name);
+
+    /**
+     * Close timer for function (CPU time)
+     * @param function_name     Name with which to store the function time
+     *                          Does not have to match the actual function name
+     * @return                  None
+     */
+    void tocCpu(const char* function_name);
 
     /**
      * Start a scope based timer for a scope 
@@ -157,6 +172,11 @@ private:
      * Vector of all layers in the problem
      */
     std::vector<LayerPtr> all_layers_;
+
+    /**
+     * Get the CPU time point in terms of chrono time 
+     */
+    chronoTime getCPUTimePoint_() const;
 
     /**
      * Recursively print a layer and all of it's children

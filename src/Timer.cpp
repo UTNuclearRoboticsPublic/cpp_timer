@@ -105,6 +105,26 @@ void Timer::toc(const char* function_name){
 // ================================================================================
 // ================================================================================
 
+void Timer::ticCpu(const char* function_name){
+    std::lock_guard<std::mutex> tree_lock(tree_mtx_);
+    tictocs_.emplace_back(function_name, getCPUTimePoint_(), TicLabel::TICK);
+}
+
+// ================================================================================
+// ================================================================================
+
+void Timer::tocCpu(const char* function_name){ 
+    const auto now = getCPUTimePoint_();
+    {
+        std::lock_guard<std::mutex> tree_lock(tree_mtx_); 
+        tictocs_.emplace_back(function_name, now, TicLabel::TOCK);  
+    }    
+    tree_contition_.notify_one();
+}
+
+// ================================================================================
+// ================================================================================
+
 Ticker Timer::scopedTic(const char* function_name){
     return Ticker(function_name, this);
 }
@@ -178,6 +198,19 @@ void Timer::summary(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdo
     tree_thread_ = std::thread(&Timer::buildTree_, this);
     base_count_  = 1;
     while(concluded_);
+}
+
+// ================================================================================
+// ================================================================================
+
+chronoTime Timer::getCPUTimePoint_() const{
+    static constexpr auto multiplier = chronoTime::duration::period::den / chronoTime::duration::period::num;
+
+    const std::clock_t time_point = std::clock();
+    const chronoDuration chrono_ticks(time_point * multiplier / CLOCKS_PER_SEC);
+    const chronoTime now(chrono_ticks);
+
+    return now;
 }
 
 // ================================================================================
