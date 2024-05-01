@@ -8,12 +8,12 @@
 namespace cpp_timer{
 
 struct TimerTotal{
-    std::string_view name;
+    const char* name;
     int call_count = 0;
     chronoDuration duration = chronoDuration(0);
 
     TimerTotal() = default;
-    TimerTotal(std::string_view name_, int call_count_, chronoDuration dur_) : name(name_), call_count(call_count_), duration(dur_) {}
+    TimerTotal(const char* name_, int call_count_, chronoDuration dur_) : name(name_), call_count(call_count_), duration(dur_) {}
 
     static bool compareTotalByName(TimerTotal P1, TimerTotal P2){
         return P1.name < P2.name;

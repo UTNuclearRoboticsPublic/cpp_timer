@@ -147,6 +147,21 @@ void Timer::summary(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdo
         current_layer_ = current_layer_->parent.lock();
     }
 
+    // Collect all processed function names
+    for (LayerPtr layer : all_layers_){
+        std::string pretty_name = parseFunctionName(layer->name, false);
+        auto [start, end] = function_name_map_.equal_range(pretty_name);
+        bool already_mapped = false;
+        for (auto it = start; it != end; ++it){
+            if (it->second == layer->name){
+                already_mapped = true;
+            }
+        }
+        if (!already_mapped){
+            function_name_map_.insert({pretty_name, layer->name});
+        }
+    }
+
     // Show the full function tree
     std::cout << colours.green << "\n============================= FUNCTION BREAKDOWN =============================\n" << colours.reset;
     printLayer_(current_layer_, breakdown_order);
@@ -177,13 +192,13 @@ void Timer::summary(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdo
     std::sort(sorted_times.begin(), sorted_times.end(), comp);
 
     for (const TimerTotal &T : sorted_times){
-        std::string_view name = parseFunctionName(T.name);
+        std::string name = parseFunctionName(T.name);
         time_t total_time   = T.duration.count();
         int call_count      = T.call_count;
         time_t avg_time     = total_time/call_count;
 
-        const std::string_view avg_unit   = normalizeDuration_(avg_time);        
-        const std::string_view total_unit = normalizeDuration_(total_time);
+        const char* avg_unit   = normalizeDuration_(avg_time);        
+        const char* total_unit = normalizeDuration_(total_time);
         const std::string bar = colours.magenta + "   |   "s + colours.cyan;
 
         // Formatted output
@@ -310,7 +325,7 @@ void Timer::buildTree_(){
 // ================================================================================
 // ================================================================================
 
-std::string_view Timer::normalizeDuration_(time_t& duration) const{
+const char* Timer::normalizeDuration_(time_t& duration) const{
     static constexpr std::array units = {" ns", " us", " ms"};
     size_t div_count = 0;
     while (duration > 1000 && div_count < (units.size() - 1)){
@@ -350,14 +365,14 @@ void Timer::printLayer_(const LayerPtr& layer, SummaryOrder order, time_t prev_d
 
     for (const LayerPtr& child : sorted_layers){
         // Get the child layer info
-        std::string_view name  = parseFunctionName(child->name);
-        time_t duration      = std::chrono::duration_cast<std::chrono::nanoseconds>(child->duration).count();
-        time_t avg_dur       = duration/child->call_count;
-        prev_duration         -= duration;
+        std::string name = parseFunctionName(child->name);
+        time_t duration  = std::chrono::duration_cast<std::chrono::nanoseconds>(child->duration).count();
+        time_t avg_dur   = duration/child->call_count;
+        prev_duration   -= duration;
 
         auto normalized_duration = duration;
-        const std::string_view unit = normalizeDuration_(normalized_duration);
-        const std::string_view avg_unit = normalizeDuration_(avg_dur); 
+        const char* unit = normalizeDuration_(normalized_duration);
+        const char* avg_unit = normalizeDuration_(avg_dur); 
 
         std::ostringstream left_side, right_side;
 
@@ -386,8 +401,8 @@ void Timer::printLayer_(const LayerPtr& layer, SummaryOrder order, time_t prev_d
     // If the function body was at least 1ns, report it
     if (prev_duration > 0){
         time_t prev_avg_dur = prev_duration/layer->call_count;
-        const std::string_view unit = normalizeDuration_(prev_duration);
-        const std::string_view function_unit = normalizeDuration_(prev_avg_dur);
+        const char* unit = normalizeDuration_(prev_duration);
+        const char* function_unit = normalizeDuration_(prev_avg_dur);
 
         std::ostringstream left_side, right_side;
         left_side << colours.magenta << std::setw(5*(layer->layer_index + 1)) << "|--- " << colours.reset;
@@ -438,22 +453,22 @@ void Timer::getTotals_(LayerPtr layer){
 // ================================================================================
 // ================================================================================
 
-std::string_view Timer::parseFunctionName(std::string_view name){
+std::string Timer::parseFunctionName(std::string name, bool check_namespace){
     // Generally a function name has the form 
     // type namespace1::namespace2::...::namespacen::functionName (args)
     //     ^                                        ^             ^
     // The caret symbols above show where the characters of interest are
 
     // Find the first instance of a space
-    size_t space  = name.find(" ");
+    size_t space = name.find(" ");
 
     // If no space was found, return the entire string truncated to fit
     if (space == std::string::npos){
         return name.substr(0, 30);
     }
 
-    // Find the fist instance of a "("
-    size_t bracket = name.find("(", space+1);
+    // Find the last instance of a "("
+    size_t bracket = name.find_last_of("(");
     if (bracket == std::string::npos){
         return name;
     }
@@ -464,11 +479,19 @@ std::string_view Timer::parseFunctionName(std::string_view name){
         last_pos = space;
     }
 
-    // Return just the simplified version of the function name
-    auto name_simple = name.substr(last_pos + 1, bracket - last_pos - 1);
+    // Return just the simplified version of the function name and keep it inside 31 characters for formatting
+    std::string name_simple = name.substr(last_pos + 1, bracket - last_pos - 1).substr(0, 30);
 
-    // Keep the name inside 31 characters for formatting
-    return name_simple.substr(0,30);
+    // If we have multiple functions with the same name, include the last layer of namespace resolution
+    if (check_namespace && (function_name_map_.count(name_simple.c_str()) > 1)){
+        size_t namespace_pos = name.find_last_of(":", last_pos - 2);
+        if (namespace_pos != std::string::npos){
+            std::string namespace_str = name.substr(namespace_pos + 1, last_pos - namespace_pos);
+            name_simple = namespace_str + name_simple;
+        }
+    }
+
+    return name_simple.substr(0, 30);
 }
 
 } // namespace cpp_timer

@@ -7,7 +7,7 @@
 namespace cpp_timer{
 
 struct Layer{
-    std::string_view name;
+    const char* name;
     int layer_index;
     int call_count = 1;
     int call_idx = 0;

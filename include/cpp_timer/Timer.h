@@ -40,6 +40,7 @@
 #include <chrono>
 #include <memory>
 #include <thread>
+#include <map>
 #include <condition_variable>
 #include "boost/preprocessor/cat.hpp"
 #include "boost/current_function.hpp"
@@ -149,6 +150,12 @@ private:
     std::vector<TicLabel> tictocs_;
 
     /**
+     * A map of all parsed function names against their original names. If a parsed name
+     * occurs multiple times, then a namespace can be added on to help differentiate the function calls
+     */
+    std::multimap<std::string, const char*> function_name_map_;
+
+    /**
      * Thread which works on building the tree while allowing the main thread to run uninterrupted 
      */
     std::thread tree_thread_;
@@ -210,12 +217,12 @@ private:
      * Report a duration in the most intuitive units (largest being milliseconds)
      * @return          The string of the unit for this duration 
      */
-    std::string_view normalizeDuration_(time_t& dur_ns) const;
+    const char* normalizeDuration_(time_t& dur_ns) const;
 
     /**
      * Variable to store the total time taken in each process
      */
-    std::map<std::string_view, TimerTotal> totals_;
+    std::map<const char*, TimerTotal> totals_;
 
     /**
      * Variable for the total number of independent processes measured
@@ -225,7 +232,7 @@ private:
     /**
      * Parse a function name so that it reads well to a human, and fits inside the summary portion 
      */
-    static std::string_view parseFunctionName(std::string_view name);
+    std::string parseFunctionName(std::string name, bool check_namespace = true);
 };
 
 }   // namespace cpp_timer
