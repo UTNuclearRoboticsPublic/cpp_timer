@@ -40,7 +40,7 @@
 #include <chrono>
 #include <memory>
 #include <thread>
-#include <map>
+#include <sstream>
 #include <condition_variable>
 #include "boost/preprocessor/cat.hpp"
 #include "boost/current_function.hpp"
@@ -124,6 +124,14 @@ public:
     };
 
     /**
+     * Get the string version of the summary. Useful if you want to export to a file or print 
+     * through some logging mechanism other than std::cout
+     * @param total_order       The order in which to present the order of function calls in the overarching summary
+     * @param breakdown_order   The order in whcih to present the order of function calls in the detailed summary
+     */
+    std::string get_summary_string(SummaryOrder total_order = BY_NAME, SummaryOrder breakdown_order = BY_CALL_ORDER);
+
+    /**
      * Show the summary of the all of the timer calls. All tic() calls must be closed
      * when this function is called. Two versions of the summary will be printed. The 
      * first is a nested of view of function runtime, and the second is the total time
@@ -179,6 +187,11 @@ private:
      * Vector of all layers in the problem
      */
     std::vector<LayerPtr> all_layers_;
+
+    /**
+     * A stringstream object used to aggregate results for summary printing
+     */
+    std::stringstream summary_ss_;
 
     /**
      * Get the CPU time point in terms of chrono time 

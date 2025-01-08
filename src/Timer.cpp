@@ -39,9 +39,6 @@
 
 using namespace std::string_literals;
 
-using std::cout;
-using std::endl;
-
 #define TICTOC_BUFFER_SIZE 1000
 
 constexpr struct {
@@ -132,7 +129,7 @@ Ticker Timer::scopedTic(const char* function_name){
 // ================================================================================
 // ================================================================================
 
-void Timer::summary(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdown_order){
+std::string Timer::get_summary_string(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdown_order){
     // Notify the worker thread to finish with its job
     {
         std::lock_guard<std::mutex> tree_lock(tree_mtx_);
@@ -162,13 +159,16 @@ void Timer::summary(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdo
         }
     }
 
+    // Re-initialize the stringstream used to capture the entire summary
+    summary_ss_ = std::stringstream{};
+
     // Show the full function tree
-    std::cout << colours.green << "\n============================= FUNCTION BREAKDOWN =============================\n" << colours.reset;
+    summary_ss_ << colours.green << "\n============================= FUNCTION BREAKDOWN =============================\n" << colours.reset;
     printLayer_(current_layer_, breakdown_order);
 
     // Show the total time spent on each function, regardless of parent/child relations
-    std::cout << colours.green   << "\n\n==================================== SUMMARY ===================================\n";
-    std::cout << colours.magenta <<     "                                Total Time   |   Times Called   |   Average Time\n" << colours.reset;
+    summary_ss_ << colours.green   << "\n\n==================================== SUMMARY ===================================\n";
+    summary_ss_ << colours.magenta <<     "                                Total Time   |   Times Called   |   Average Time\n" << colours.reset;
     
     // Sort the totals by the sorting mechanism presented
     getTotals_(current_layer_);
@@ -202,17 +202,26 @@ void Timer::summary(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdo
         const std::string bar = colours.magenta + "   |   "s + colours.cyan;
 
         // Formatted output
-        std::cout << colours.reset << std::setw(31) << std::left << name << ":";
-        std::cout << colours.cyan  << std::setw(7) << std::right << total_time << total_unit << bar;
-        std::cout << std::setw(12) << call_count << bar;
-        std::cout << std::setw(9)  << avg_time << avg_unit << "\n";
+        summary_ss_ << colours.reset << std::setw(31) << std::left << name << ":";
+        summary_ss_ << colours.cyan  << std::setw(7) << std::right << total_time << total_unit << bar;
+        summary_ss_ << std::setw(12) << call_count << bar;
+        summary_ss_ << std::setw(9)  << avg_time << avg_unit << "\n";
     }
-    std::cout << colours.reset << " " << std::endl;
+    summary_ss_ << colours.reset << " " << std::endl;
 
     // Restart the tree thread
     tree_thread_ = std::thread(&Timer::buildTree_, this);
     base_count_  = 1;
     while(concluded_);
+
+    return summary_ss_.str();
+}
+
+// ================================================================================
+// ================================================================================
+
+void Timer::summary(Timer::SummaryOrder total_order, Timer::SummaryOrder breakdown_order){
+    std::cout << get_summary_string(total_order, breakdown_order);
 }
 
 // ================================================================================
@@ -380,22 +389,22 @@ void Timer::printLayer_(const LayerPtr& layer, SummaryOrder order, time_t prev_d
         if (layer->layer_index)
             left_side << colours.magenta << std::setw(5*(layer->layer_index + 1)) << std::right << "|--- " << colours.reset;
         else {
-            std::cout << '\n';
+            summary_ss_ << '\n';
             left_side << colours.green << base_count_++ << ": " << colours.reset;
         }
         left_side << name << colours.blue << " (" << child->call_count << "): " << colours.cyan << normalized_duration << unit;
-        std::cout << std::setw(92) << std::left << left_side.str() << " " << colours.magenta;  
+        summary_ss_ << std::setw(92) << std::left << left_side.str() << " " << colours.magenta;  
 
         // Right side contains average runtime of each layer
         right_side << "(" << avg_dur << avg_unit << ")";
-        std::cout << std::setw(10) << std::right << right_side.str() << colours.reset << '\n';
+        summary_ss_ << std::setw(10) << std::right << right_side.str() << colours.reset << '\n';
 
         // Recursively print the next layer
         printLayer_(child, order, duration);
 
         // After all recursive calls have finished, print a dividing line
         if (layer->layer_index == 0)
-            cout << colours.white << "______________________________________________________________________________\n";
+            summary_ss_ << colours.white << "______________________________________________________________________________\n";
     }
 
     // If the function body was at least 1ns, report it
@@ -409,8 +418,8 @@ void Timer::printLayer_(const LayerPtr& layer, SummaryOrder order, time_t prev_d
         left_side << "Function Body: " << colours.cyan << prev_duration << unit;
         right_side << "(" << prev_avg_dur << function_unit << ")";
 
-        std::cout << std::setw(86) << std::left << left_side.str();
-        std::cout << colours.magenta << std::setw(10) << std::right << right_side.str() << colours.reset << '\n';
+        summary_ss_ << std::setw(86) << std::left << left_side.str();
+        summary_ss_ << colours.magenta << std::setw(10) << std::right << right_side.str() << colours.reset << '\n';
     }
 }
 
