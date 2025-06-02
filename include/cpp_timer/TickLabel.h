@@ -12,9 +12,20 @@ struct TicLabel{
         TICK,
         TOCK
     } type = TICK;
+    std::thread::id thread_id;
 
-    TicLabel(const char* n, chronoTime s, TickType t) : name(n), stamp(s), type(t) {}
+    TicLabel(const char* n, chronoTime s, TickType t, std::thread::id id) : name(n), stamp(s), type(t), thread_id(id) {}
 };
+
+static inline std::ostream& operator<<(std::ostream& stream, const TicLabel& label) {
+    stream << "{\n"
+           << "\tName:   " << label.name << "\n"
+           << "\tStamp:  " << label.stamp.time_since_epoch().count() << "\n"
+           << "\tType:   " << (label.type == label.TICK ? "Tic" : "Toc") << "\n"
+           << "\tThread: " << label.thread_id << "\n" 
+           << "}";
+    return stream;
+} 
 
 } // end namespace cpp_timer
 

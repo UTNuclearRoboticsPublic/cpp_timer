@@ -79,6 +79,34 @@ void multithreadedFunction(){
     }
 }
 
+void granularMultithreadedFunction(){
+    auto _ = timer.scopedTic(BOOST_CURRENT_FUNCTION);
+    std::vector<std::thread> threads(5);
+    volatile uint64_t sum = 0;
+    auto work = [&sum](int idx){
+        timer.tic("work");
+        for (int i = 0; i < 1e8; i++){
+            sum++;
+        }
+        if (idx == 3) {
+            timer.tic("thread 3 work");
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            timer.toc("thread 3 work");
+        }
+        timer.toc("work");
+    };
+
+    timer.enterMultithreadedRegion();
+    for (int i = 0; i < 5; i++){
+        threads[i] = std::thread(work, i);
+    }
+
+    for (auto& thread : threads){
+        thread.join();
+    }
+    timer.exitMultithreadedRegion();
+}
+
 void parentFunction(){
     // Use the macro to automatically get the parent function name
     TIMER_TIC;
@@ -219,6 +247,7 @@ int main(){
     }
 
     // Here's the difference between real and cpu time
+    timer.enterMultithreadedRegion();
     timer.tic("RealVsCpu");
 
     timer.tic("realTime");
@@ -238,6 +267,9 @@ int main(){
     timer.tocCpu("multithreadedCpu");
 
     timer.toc("RealVsCpu");
+    timer.exitMultithreadedRegion();
+
+    granularMultithreadedFunction();
 
     // Print the overall summary in decreaseing runtime order, and the function breakdown in the order the functions were called
     timer.summary(cpp_timer::Timer::SummaryOrder::BY_TOTAL, cpp_timer::Timer::SummaryOrder::BY_CALL_ORDER);

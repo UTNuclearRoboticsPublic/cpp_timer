@@ -34,6 +34,7 @@
 
 #include <map>
 #include <mutex>
+#include <atomic>
 #include <math.h>
 #include <string>
 #include <vector>
@@ -115,6 +116,30 @@ public:
      */
     Ticker scopedTic(const char* name);
 
+    void forceTrigger() {
+        std::unique_lock<std::mutex> tree_lock(tree_mtx_);
+        force_trigger_ = true;
+        tree_contition_.notify_one();
+        tree_contition_.wait(tree_lock, [this]() -> bool {return !force_trigger_;});
+    }
+
+    /**
+     * Start timing a multithreaded portion of code
+     */
+    void enterMultithreadedRegion() {
+        forceTrigger();
+        multithreaded_ = true;
+    }
+
+    /**
+     * Conclude timing a multithreaded portion of code
+     */
+    void exitMultithreadedRegion() {
+        multithreaded_ = false;
+        last_batch_was_multithreaded_ = true;
+        forceTrigger();
+    }
+
     enum SummaryOrder{
         BY_NAME,
         BY_TOTAL,
@@ -192,6 +217,27 @@ private:
      * A stringstream object used to aggregate results for summary printing
      */
     std::stringstream summary_ss_;
+
+    /**
+     * A flag to force the tree to update. After the update is complete,
+     * the flag automatically resets to false
+     */
+    std::atomic<bool> force_trigger_ = false;
+
+    /**
+     * Flag to indicate whether additional metadata should be collected in a multithreaded region
+     */
+    bool multithreaded_ = false;
+
+    /**
+     * Flag to indicate that the last batch of Tictoc labels was performed multithreaded
+     */
+    bool last_batch_was_multithreaded_ = false;
+
+    /**
+     * ID of the main thread in which the timer is created
+     */
+    std::thread::id main_thread_id_{std::this_thread::get_id()};
 
     /**
      * Get the CPU time point in terms of chrono time 

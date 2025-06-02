@@ -84,7 +84,7 @@ Timer::~Timer(){
 
 void Timer::tic(const char* function_name){
     std::lock_guard<std::mutex> tree_lock(tree_mtx_);
-    tictocs_.emplace_back(function_name, std::chrono::steady_clock::now(), TicLabel::TICK);
+    tictocs_.emplace_back(function_name, std::chrono::steady_clock::now(), TicLabel::TICK, multithreaded_ ? std::this_thread::get_id() : std::thread::id(0));
 }
 
 // ================================================================================
@@ -94,9 +94,9 @@ void Timer::toc(const char* function_name){
     const auto now = std::chrono::steady_clock::now(); 
     {
         std::lock_guard<std::mutex> tree_lock(tree_mtx_); 
-        tictocs_.emplace_back(function_name, now, TicLabel::TOCK);  
+        tictocs_.emplace_back(function_name, now, TicLabel::TOCK, std::this_thread::get_id());  
     }    
-    tree_contition_.notify_one();
+    if (!multithreaded_) tree_contition_.notify_one();
 }
 
 // ================================================================================
@@ -104,7 +104,7 @@ void Timer::toc(const char* function_name){
 
 void Timer::ticCpu(const char* function_name){
     std::lock_guard<std::mutex> tree_lock(tree_mtx_);
-    tictocs_.emplace_back(function_name, getCPUTimePoint_(), TicLabel::TICK);
+    tictocs_.emplace_back(function_name, getCPUTimePoint_(), TicLabel::TICK, std::this_thread::get_id());
 }
 
 // ================================================================================
@@ -114,9 +114,9 @@ void Timer::tocCpu(const char* function_name){
     const auto now = getCPUTimePoint_();
     {
         std::lock_guard<std::mutex> tree_lock(tree_mtx_); 
-        tictocs_.emplace_back(function_name, now, TicLabel::TOCK);  
+        tictocs_.emplace_back(function_name, now, TicLabel::TOCK, std::this_thread::get_id());  
     }    
-    tree_contition_.notify_one();
+    if (!multithreaded_) tree_contition_.notify_one();
 }
 
 // ================================================================================
@@ -300,20 +300,55 @@ void Timer::treeToc_(TicLabel label){
 
 void Timer::buildTree_(){
     concluded_ = false;
+    bool was_multithreaded = false;
+    
+    // Create a large vector to hold all the current tictocs (discourages copying at runtime)
+    std::vector<TicLabel> tictoc_copy;
+    tictoc_copy.reserve(2*TICTOC_BUFFER_SIZE);
+
     while (not (concluded_ && tictocs_.empty())){
-        // Create a large vector to hold all the current tictocs (discourages copying at runtime)
-        std::vector<TicLabel> tictoc_copy;
-        tictoc_copy.reserve(2*TICTOC_BUFFER_SIZE);
+        tictoc_copy.clear();    
 
         {
             // Protect the tictocs_ vectors from race conditions
             std::unique_lock<std::mutex> tree_lock(tree_mtx_);
             
             // Build up the tree if we've collected enough data
-            tree_contition_.wait(tree_lock, [this](){return concluded_ || (tictocs_.size() > TICTOC_BUFFER_SIZE);});
+            // However, if we're running multithreaded we allow the
+            // buffer to grow uncontrolled because we need all
+            // multithreaded tictocs to come in at the same time
+            tree_contition_.wait(tree_lock, 
+                [this](){
+                    return concluded_
+                        || force_trigger_
+                        || (tictocs_.size() > TICTOC_BUFFER_SIZE);
+                }
+            );
+
+            // Clean up flags so that the main thread can keep using them
+            if (last_batch_was_multithreaded_) {
+                was_multithreaded = true;
+                last_batch_was_multithreaded_ = false;
+            }
 
             // Do an Indiana Jones artifact swap
             std::swap(tictoc_copy, tictocs_);
+        }
+
+        // Let the forcing thread know that the operation is complete
+        if (force_trigger_) {
+            force_trigger_ = false;
+            tree_contition_.notify_one();
+        }
+
+        // Group the tictocs by thread id
+        if (was_multithreaded) {
+            was_multithreaded = false;
+            std::stable_sort(tictoc_copy.begin(), tictoc_copy.end(), 
+                [](const cpp_timer::TicLabel& label1, const cpp_timer::TicLabel& label2) -> bool {
+                    return label1.thread_id < label2.thread_id;
+                }
+            );
         }
 
         // Add all the current timestamps to the tree
