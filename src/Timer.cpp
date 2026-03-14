@@ -33,6 +33,7 @@
 #include <iostream>
 #include <assert.h>
 #include <algorithm>
+#include <functional>
 #include "cpp_timer/Timer.h"
 #include "cpp_timer/Ticker.h"
 #include "cpp_timer/TimerTotal.h"
@@ -370,7 +371,7 @@ void Timer::buildTree_(){
 // ================================================================================
 
 const char* Timer::normalizeDuration_(time_t& duration) const{
-    static constexpr std::array units = {" ns", " us", " ms"};
+    static constexpr std::array<const char*, 3> units = {" ns", " us", " ms"};
     size_t div_count = 0;
     while (duration > 1000 && div_count < (units.size() - 1)){
         duration /= 1000;
