@@ -29,10 +29,12 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #include <map>
+#include <array>
 #include <iomanip>
 #include <iostream>
 #include <assert.h>
 #include <algorithm>
+#include <functional>
 #include "cpp_timer/Timer.h"
 #include "cpp_timer/Ticker.h"
 #include "cpp_timer/TimerTotal.h"
